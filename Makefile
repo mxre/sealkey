@@ -43,6 +43,7 @@ $(BINARY): $(OBJECTS)
 	$(CC) $(LDFLAGS) $^ $(LIBRARIES) -o $@
 
 obj/%.d: src/%.c
+	@test -d obj || mkdir obj
 	@#echo -e "\x1b[33mDEP\x1b[0m  $<"
 	$(CC) $(CFLAGS) $(INCLUDES) $< -MM -MF $@
 
