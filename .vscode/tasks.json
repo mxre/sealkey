@@ -1,0 +1,75 @@
+{
+  "version": "0.1.0",
+  "command": "make",
+  "isShellCommand": true,
+  "options": {
+    "env": {
+      "LANG": "C"
+    }
+  },
+  "tasks": [
+    {
+      "taskName": "debug",
+      "isBuildCommand": true,
+      "showOutput": "always",
+      "problemMatcher": {
+        "owner": "cpp",
+        "fileLocation": [
+          "relative",
+          "${workspaceRoot}"
+        ],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(Fehler|error|Warnung|warning):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    },
+    {
+      "taskName": "dist",
+      "isBuildCommand": true,
+      "showOutput": "always",
+      "problemMatcher": {
+        "owner": "cpp",
+        "fileLocation": [
+          "relative",
+          "${workspaceRoot}"
+        ],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(Fehler|error|Warnung|warning):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    },
+    {
+      "taskName": "doc",
+      "isBuildCommand": true,
+      "showOutput": "always",
+      "problemMatcher": {
+        "owner": "cpp",
+        "fileLocation": [
+          "absolute"
+        ],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):\\s+(Fehler|error|Warnung|warning):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      }
+    },
+    {
+      "taskName": "clean",
+      "isBuildCommand": false,
+      "showOutput": "never"
+    }
+  ]
+}

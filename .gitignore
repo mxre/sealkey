@@ -1,0 +1,10 @@
+/*.json
+
+obj/
+doc/html
+*.o
+*.d
+sealkey
+
+*~
+*.bak
