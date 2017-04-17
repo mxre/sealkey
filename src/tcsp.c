@@ -328,10 +328,10 @@ cleanup:
 }
 
 ssize_t tcsp_unseal_data(const char* filename, uint8_t** data) {
-    ssize_t ret = -1;
+    int ret = -1;
 
     int result = 0;
-    if ((result = tpmUnsealFile((char*) filename, data, (int*) &ret, true)) != 0) {
+    if ((result = tpmUnsealFile((char*) filename, data, &ret, true)) != 0) {
         const char* error = tpmUnsealStrerror(result);
         fprintf(stderr, "Error: tpm_unseal_file: %s\n", error);
         ret = -1;
