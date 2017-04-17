@@ -8,3 +8,6 @@ sealkey
 
 *~
 *.bak
+
+archlinux/*.pkg.tar.*
+
