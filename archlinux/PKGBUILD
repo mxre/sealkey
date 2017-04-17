@@ -1,0 +1,31 @@
+# Maintainer: Max Resch <resch.max@gmail.com>
+
+pkgname=sealkey
+pkgver=0.1
+pkgrel=1
+pkgdesc="Create TPM-sealed keyfile"
+arch=('x86_64')
+url="https://github.com/mxre/sealkey"
+license=('BSD')
+depends=('json-c' 'keyutils' 'openssl' 'tpm-tools' 'trousers' )
+makedepends=('git')
+
+git_commit=29c72b18fc23cb160e883f0f6e79195e0bfa843e
+
+source=("${pkgname}::git+${url}#commit=${git_commit}")
+		
+sha256sums=('SKIP')
+
+build() {
+	cd "$pkgname"
+	make dist
+}
+
+package() {	
+	install -Dm644 "${pkgname}/LICENSE.md" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+	install -Dm755 "${pkgname}/sealkey" "${pkgdir}/usr/bin/sealkey"
+	install -Dm644 "${pkgname}/archlinux/sealkey@.path" "${pkgdir}/usr/lib/systemd/system/sealkey@.path"
+	install -Dm644 "${pkgname}/archlinux/sealkey@.service" "${pkgdir}/usr/lib/systemd/system/sealkey@.service"
+	install -Dm644 "${pkgname}/archlinux/sealkey.json" "${pkgdir}/etc/sealkey/linux.json"
+}
+

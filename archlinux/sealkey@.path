@@ -1,0 +1,9 @@
+[Unit]
+Description = Watch initrd for changes to reseal TPM key
+
+[Path]
+PathChanged = /boot/initramfs-%i.img
+
+[Install]
+WantedBy=multi-user.target
+

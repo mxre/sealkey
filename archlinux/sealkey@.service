@@ -1,0 +1,6 @@
+[Unit]
+Description = Seal encryption key for TPM
+
+[Service]
+ExecStart = /usr/bin/sealkey tpm_update /etc/sealkey/%i.json /home/max/encryption.enc /home/max/encryption.enc
+

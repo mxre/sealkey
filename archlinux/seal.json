@@ -1,0 +1,21 @@
+{
+  "pcrlock": {
+    "0": { "type": "pcr" },
+    "1": { "type": "pcr" },
+    "2": { "type": "pcr" },
+    "3": { "type": "pcr" },
+    "4": {
+      "type": "load-image",
+      "paths": [
+        "/boot/EFI/systemd/systemd-bootx64.efi",
+        "/boot/vmlinuz-linux"
+      ]
+    },
+    "5": { "type": "pcr" },
+    "7": { "type": "pcr" },
+    "8": {
+      "type": "systemd-boot-entry",
+      "path": "/boot/loader/entries/arch.conf"
+    }
+  }
+}
