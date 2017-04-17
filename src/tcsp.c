@@ -227,9 +227,6 @@ ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* c
 		goto cleanup;
     }
 
-    CRYPTO_malloc_debug_init(); 
-    CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-
     BIO* input = BIO_new_mem_buf(data, len);
     BIO* out = BIO_new(BIO_s_mem());
     BIO* b64 = BIO_new(BIO_f_base64());

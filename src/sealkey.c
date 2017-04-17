@@ -876,6 +876,11 @@ static void* crypto_mem_leak_cb(unsigned long order, const char *file, int line,
 int main(int argc, char* argv[]) {
     int ret = 1;
 
+#if SEALKEY_DEBUG_OUT
+    CRYPTO_malloc_debug_init();
+    CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
+#endif
+
     if (argc > 2) {
         if (strcmp(argv[1], "pcr") == 0 && argc > 3) {
             json_object_t configuration = NULL;
