@@ -51,7 +51,7 @@
     {
       "taskName": "doc",
       "isBuildCommand": true,
-      "showOutput": "always",
+      "showOutput": "never",
       "problemMatcher": {
         "owner": "cpp",
         "fileLocation": [

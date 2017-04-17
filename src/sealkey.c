@@ -41,6 +41,8 @@
 #include <assert.h>
 #include <keyutils.h>
 
+#include <openssl/crypto.h>
+
 #include "configfile.h"
 #include "pcr.h"
 #include "measure_pe.h"
@@ -50,6 +52,12 @@
 
 #if USE_TSPI
 #include "tcsp.h"
+#endif
+
+#ifdef DEBUG
+#define SEALKEY_DEBUG_OUT 1
+#else
+#define SEALKEY_DEBUG_OUT 0
 #endif
 
 #define PROGRAM_NAME "sealkey"
@@ -91,7 +99,7 @@ static inline bool calculate_load_image_array(json_object_t array, tpm_hash_t* c
             return false;
         }
 
-#ifdef DEBUG
+#if SEALKEY_DEBUG_OUT
 		print_hex((uint8_t*) &digest, TPM12_HASH_LEN);
 		printf(" %s\n", filename);
 #endif
@@ -276,7 +284,7 @@ static bool generate_pcr_info_struct(json_object_t configuration, char* pcrinfo)
         goto cleanup;
     }
 
-#ifdef DEBUG
+#if SEALKEY_DEBUG_OUT
     for (int i = 0; i < PCR_LENGTH; i++) {
         printf("NCR[%02d] ", i);
         print_hex(pcr_ctx.pcrs[i].digest, TPM12_HASH_LEN);
@@ -293,7 +301,7 @@ static bool generate_pcr_info_struct(json_object_t configuration, char* pcrinfo)
 	}
 	
     pcr_composite_get_info_hex(&composite, pcrinfo);
-#ifdef DEBUG
+#if SEALKEY_DEBUG_OUT
     // printf("%s\n", pcrinfo);
     //4  a32905cb0605b84c3651708d80837779fca0484d
     //8  940e2c77b9d3301be61dcf1ce1c05859ef76daed
@@ -375,14 +383,14 @@ static key_serial_t seal_new_key(json_object_t configuration) {
 	}
 	
 	snprintf(parameters, len, "new %d pcrinfo=%s", key_length, pcrinfo_hex);
-#ifdef DEBUG
+#if SEALKEY_DEBUG_OUT
 	fprintf(stderr, "keyctl add trusted %s \"%s\" @u\n", key_name, parameters);
 #endif
 	key_num = add_key("trusted", "kmk", parameters, strlen(parameters), KEY_SPEC_USER_KEYRING);
 	
 	if (key_num == -1) {
         if (errno == ENODEV) {
-            fprintf(stderr, "Error: Check if the kernel module `trusted` is loaded.\n");
+            fprintf(stderr, "Error: Check if the kernel module `trusted´ is loaded.\n");
         }
 		fprintf(stderr, "Error: add_key: %m\n");
 		return -1;
@@ -490,7 +498,7 @@ static inline key_serial_t update_command(json_object_t configuration, char* out
 	}
 	
 	snprintf(parameters, len, "update pcrinfo=%s", pcrinfo_hex);
-#ifdef DEBUG
+#if SEALKEY_DEBUG_OUT
 	fprintf(stderr, "keyctl update %d \"%s\" @u\n", key_id, parameters);
 #endif
 	if (keyctl_update(key_id, parameters, strlen(parameters)) != 0) {
@@ -691,14 +699,20 @@ static inline bool tpm_seal_command(json_object_t configuration, const char* inf
     } else {
         const size_t buffer_chunk = 4096;
         uint16_t counter = 1;
-        buffer = malloc(buffer_chunk);
+        if ((buffer = malloc(buffer_chunk)) == NULL ) {
+            fprintf(stderr, "Error: malloc: %m\n");
+            goto cleanup;
+        }
         size_t read_bytes = 0;
 
         while (!feof(stdin)) {
             read_bytes = fread(buffer, 1, buffer_chunk, stdin);
             if (read_bytes == buffer_chunk) {
                 counter += 1;
-                buffer = realloc(buffer, buffer_chunk * counter);
+                if ((buffer = realloc(buffer, buffer_chunk * counter)) == NULL) {
+                    fprintf(stderr, "Error: malloc: %m\n");
+                    goto cleanup;
+                }
             } else if (read_bytes == 0) {
                 if (ferror(stdin)) {
                     fprintf(stderr, "Error: read: %m\n");
@@ -720,10 +734,12 @@ static inline bool tpm_seal_command(json_object_t configuration, const char* inf
             fprintf(stderr, "Error: open: %m\n");
             goto cleanup;
         }
-        fprintf(output, "%s\n", out_buffer);
+        fwrite(out_buffer, 1, out_length, output);
+        fputs("\n", output);
         fclose(output);
     } else {
-        printf("%s\n", out_buffer);
+        fwrite(out_buffer, 1, out_length, stdout);
+        fputs("\n", stdout);
     }
 
     ret = true;
@@ -786,10 +802,12 @@ static inline bool tpm_update_command(json_object_t configuration, const char* i
             fprintf(stderr, "Error: open: %m\n");
             goto cleanup;
         }
-        fprintf(output, "%s\n", out_buffer);
+        fwrite(out_buffer, 1, out_length, output);
+        fputs("\n", output);
         fclose(output);
     } else {
-        printf("%s\n", out_buffer);
+        fwrite(out_buffer, 1, out_length, stdout);
+        fputs("\n", stdout);
     }
 
     ret = true;
@@ -804,7 +822,7 @@ cleanup:
 #endif // USE_TSPI
 
 static void print_usage() {
-    printf(PROGRAM_NAME PROGRAM_VERSION"\n");
+    printf(PROGRAM_NAME " " PROGRAM_VERSION"\n");
     printf("\n");
     printf(PROGRAM_NAME " new <configfile> [<outfile>]\n");
     printf("   Create a new key with specified configuration\n");
@@ -847,6 +865,13 @@ static void print_usage() {
     printf("  \"load-image\" create PCR 4 hash from the list in \"paths\"\n");
     printf("  \"systemd-boot-entry\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n");
 }
+
+#if SEALKEY_DEBUG_OUT
+static void* crypto_mem_leak_cb(unsigned long order, const char *file, int line, int num_bytes, void *addr) { 
+    fprintf(stderr, "Leak: Order: %7lu, File: %-28s, Line: %4d, Bytes: %5d, Addr: %p\n", order, file, line, num_bytes, addr); 
+    return addr; 
+}
+#endif
 
 int main(int argc, char* argv[]) {
     int ret = 1;
@@ -960,11 +985,16 @@ int main(int argc, char* argv[]) {
             }
 
     cleanup:
+            CRYPTO_cleanup_all_ex_data();
             configfile_free(configuration);
     	}
     } else {
 		print_usage();
 	}
+
+#if SEALKEY_DEBUG_OUT
+    CRYPTO_mem_leaks_cb(crypto_mem_leak_cb); 
+#endif
 	
 	return ret;
 }

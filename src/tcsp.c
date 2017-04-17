@@ -33,9 +33,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <unistd.h>
 
 #include <openssl/evp.h>
 #include <openssl/bio.h>
+
 #include <tss/tspi.h>
 #include <trousers/trousers.h>
 
@@ -225,11 +227,12 @@ ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* c
 		goto cleanup;
     }
 
+    CRYPTO_malloc_debug_init(); 
+    CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
+
     BIO* input = BIO_new_mem_buf(data, len);
     BIO* out = BIO_new(BIO_s_mem());
     BIO* b64 = BIO_new(BIO_f_base64());
-    // don't free memory buffer
-    BIO_set_close(input, BIO_NOCLOSE);
 
     // output sealed data header string
     BIO_puts(out, TPMSEAL_HDR_STRING);
@@ -265,6 +268,8 @@ ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* c
     }
 
     EVP_EncryptFinal(evp_cipher_ctx, encrypted_data, &encrypted_data_length);
+    EVP_CIPHER_CTX_free(evp_cipher_ctx);
+
     BIO_write(out, encrypted_data, encrypted_data_length);
     BIO_flush(out);
     out = BIO_pop(b64);
@@ -272,17 +277,54 @@ ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* c
     // end file
     BIO_puts(out, TPMSEAL_FTR_STRING);
 
+    BIO_free(b64);
     BIO_free(input);
 
+    // copy the output buffer, and free memory
     void* buffer = NULL;
     ret = BIO_get_mem_data(out, &buffer);
     *output = malloc(ret);
     memmove(*output, buffer, ret);
     BIO_free(out);
 
+    // cleanup
+    EVP_cleanup();
 cleanup:
+
+    if ((result = Tspi_Context_CloseObject(tspi_context, srk_handle)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_CloseObject", result);
+    }
+
+    if ((result = Tspi_Context_CloseObject(tspi_context, rsa_key)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_CloseObject", result);
+    }
+
+    if ((result = Tspi_Context_CloseObject(tspi_context, srk_policy)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_CloseObject", result);
+    }
+
+    if ((result = Tspi_Context_CloseObject(tspi_context, rsa_policy)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_CloseObject", result);
+    }
+
+    if ((result = Tspi_Context_CloseObject(tspi_context, data_policy)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_CloseObject", result);
+    }
+
+    if ((result = Tspi_Context_CloseObject(tspi_context, pcr_context)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_CloseObject", result);
+    }
+
+    if ((result = Tspi_Context_CloseObject(tspi_context, encrypted_data_handle)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_CloseObject", result);
+    }
+
     if ((result = Tspi_Context_FreeMemory(tspi_context, NULL)) != TSS_SUCCESS) {
         tspi_error("Tspi_Context_FreeMemory", result);
+    }
+
+    if ((result = Tspi_Context_Close(tspi_context)) != TSS_SUCCESS) {
+        tspi_error("Tspi_Context_Close", result);
     }
 
     return ret;

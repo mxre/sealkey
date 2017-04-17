@@ -45,6 +45,8 @@
 // path to the sysfs TPM
 #define SYSFS_TPM_PATH "/sys/class/tpm/tpm0"
 
+#define PCR_DEBUG_OUT 0
+
 bool pcr_ctx_from_system(pcr_ctx_t* ctx) {
 	bool ret = false;
     char* buffer = NULL;
@@ -100,7 +102,7 @@ bool pcr_ctx_from_system(pcr_ctx_t* ctx) {
             goto cleanup;
         }
 
-#ifdef DEBUG
+#if PCR_DEBUG_OUT
         printf("PCR[%02d] ", i);
         print_hex(ctx->pcrs[i].digest, TPM12_HASH_LEN);
 #endif

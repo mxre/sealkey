@@ -170,6 +170,8 @@ bool kernel_params_measure1(const char* file, tpm_hash_t* digest) {
     // this requires C11 libraries
     char16_t dest[KERNEL_PARAMS_BUFFER_LEN];
     mbstate_t state;
+    memset(&state, 0, sizeof(state));
+
     for(int i = 0; i < offset; i++) {
         mbrtoc16(&dest[i], &result[i], 1, &state);
     }

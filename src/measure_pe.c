@@ -44,7 +44,7 @@
 #include "util.h"
 #include "tpm12_types.h"
 
-#undef DEBUG
+#define MEASURE_PE_DEBUG_OUT 0
 
 // hash a PE executabale the same way LoadImage() would do in
 // EFI, based on code from OVMF
@@ -124,7 +124,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	base = pe_image;
 	// 1. Hash the image header from its base to beginning of the image checksum.
 	size = ((void*) &pe_image_header->OptionalHeader.CheckSum - pe_image);
-#ifdef DEBUG
+#if MEASURE_PE_DEBUG_OUT
 	printf("%08x - %08zx\n", 0, size);
 #endif
 	SHA1_Update(&ctx, base, size);
@@ -142,7 +142,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		// 3. Hash everything from the end of the checksum to the start of the Cert Directory.
 		base = (void*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
 		size = (size_t) ((void*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY] - base);
-#ifdef DEBUG
+#if MEASURE_PE_DEBUG_OUT
 		printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
@@ -152,7 +152,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
         // 3b. Hash everything from the end of the Cert Directory to the end of image header.
 		base = (void*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY + 1];
 		size = pe_image_header->OptionalHeader.SizeOfHeaders - (size_t) (base - pe_image);
-#ifdef DEBUG
+#if MEASURE_PE_DEBUG_OUT
 		printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
@@ -204,7 +204,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		
 		base = (void*) pe_image + section->PointerToRawData;
 		size = (size_t) section->SizeOfRawData;
-#ifdef DEBUG
+#if MEASURE_PE_DEBUG_OUT
 		printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
@@ -230,7 +230,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		
 		if (filesize > cert_size + sum_of_bytes_hashed) {
 			size = filesize - cert_size - sum_of_bytes_hashed;
-#ifdef DEBUG
+#if MEASURE_PE_DEBUG_OUT
 			printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
 #endif
 			SHA1_Update(&ctx, base, size);
@@ -244,7 +244,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	// 8. Finalize the hash
 	SHA1_Final((uint8_t*) hash, &ctx);
 
-#ifdef DEBUG
+#if MEASURE_PE_DEBUG_OUT
 	print_hex((uint8_t*) hash, SHA_DIGEST_LENGTH);
 #endif
 
