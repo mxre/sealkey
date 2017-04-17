@@ -27,5 +27,6 @@ package() {
 	install -Dm644 "${pkgname}/archlinux/sealkey@.path" "${pkgdir}/usr/lib/systemd/system/sealkey@.path"
 	install -Dm644 "${pkgname}/archlinux/sealkey@.service" "${pkgdir}/usr/lib/systemd/system/sealkey@.service"
 	install -Dm644 "${pkgname}/archlinux/seal.json" "${pkgdir}/etc/sealkey/linux.json"
+	install -Dm644 "${pkgname}/archlinux/paths.env" "${pkgdir}/etc/sealkey/paths.env"
 }
 

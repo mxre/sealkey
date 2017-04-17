@@ -2,5 +2,6 @@
 Description = Seal encryption key for TPM
 
 [Service]
-ExecStart = /usr/bin/sealkey tpm_update /etc/sealkey/%i.json /home/max/encryption.enc /home/max/encryption.enc
+EnvironmentFile = /etc/sealkey/paths.env
+ExecStart = /usr/bin/sealkey tpm_update /etc/sealkey/%i.json $KEY_PATH/tpm-%i.enc $KEY_PATH/tpm-%i.enc
 
