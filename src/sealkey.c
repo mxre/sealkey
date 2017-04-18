@@ -821,49 +821,53 @@ cleanup:
 }
 #endif // USE_TSPI
 
-static void print_usage() {
-    printf(PROGRAM_NAME " " PROGRAM_VERSION"\n");
-    printf("\n");
-    printf(PROGRAM_NAME " new <configfile> [<outfile>]\n");
-    printf("   Create a new key with specified configuration\n");
-    printf("\n");
-    printf(PROGRAM_NAME " update <configfile> [<outfile>]\n");
-    printf("   Update an exisiting key with specified configuration\n");
-    printf("\n");
+static inline void print_usage() {
+    printf(
+        PROGRAM_NAME " " PROGRAM_VERSION"\n"
+        "\n"
+        PROGRAM_NAME " new <configfile> [<outfile>]\n"
+        "   Create a new key with specified configuration\n"
+        "\n"
+        PROGRAM_NAME " update <configfile> [<outfile>]\n"
+        "   Update an exisiting key with specified configuration\n"
+        "\n"
 #if USE_TSPI
-    printf(PROGRAM_NAME " tpm_seal <configfile> [<inputfile>] [<outfile>]\n");
-    printf("   Seal a new file with PCR configuration\n");
-    printf("\n");
-    printf(PROGRAM_NAME " tpm_update <configfile> <inputfile> [<outfile>]\n");
-    printf("   Update the seal on an exisiting encrypted file with PCR configuration\n");
-    printf("\n");
+        PROGRAM_NAME " tpm_seal <configfile> [<inputfile>] [<outfile>]\n"
+        "   Seal a new file with PCR configuration\n"
+        "\n"
+        PROGRAM_NAME " tpm_update <configfile> <inputfile> [<outfile>]\n"
+        "   Update the seal on an exisiting encrypted file with PCR configuration\n"
+        "\n"
 #endif // USE_TSPI
-    printf(PROGRAM_NAME " pcrinfo <configfile> [<outfile>]\n");
-    printf("   Just generate the PCR_INFO struct, suitable for calling keyctl\n");
-    printf("\n");
-    printf(PROGRAM_NAME " pcr current <configfile>\n");
-    printf("   Show selected PCRs from the System's Firmware (read from /sys/class/tpm/tpm0)\n");
-    printf("\n");
-    printf(PROGRAM_NAME " pcr updated <configfile>\n");
-    printf("   Show selected the PCRs according to configfile\n");
-    printf("\n");
-    printf("Configuration file JSON format:\n");
-    printf("  {\n");
-    printf("    \"key\": { \"name\": \"kmk\", \"size\": 32 },\n");
-    printf("    \"pcrlock\": {\n");
-    printf("      \"0\": { \"type\": \"pcr\" },\n");
-    printf("      \"4\": { \"type\": \"load-image\", \"paths\": [ \"/boot/EFI/BOOT/BOOTX64.EFI\", \"/boot/vmlinuz-linux\" ] },\n");
-    printf("      \"8\": { \"type\": \"systemd-boot-entry\", \"path\": \"/boot/loader/entries/linux.conf\" }\n");
-    printf("    }\n");
-    printf("  }\n");
-    printf("\n");
-    printf("The \"key\" section describes key name and length for newly created keys and key updates\n");
-    printf("  Keys are created in kernel, the kernel module trusted.ko must be loaded. Keys can be\n");
-    printf("  inspected using the keyctl utility.\n");
-    printf("The \"pcrlock\" section lists PCRs for sealing the key, the following types are recognized:\n");
-    printf("  \"pcr\" read the PCR from the Firmware and use it for sealing\n");
-    printf("  \"load-image\" create PCR 4 hash from the list in \"paths\"\n");
-    printf("  \"systemd-boot-entry\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n");
+        PROGRAM_NAME " pcrinfo <configfile> [<outfile>]\n"
+        "   Just generate the PCR_INFO struct, suitable for calling keyctl\n"
+        "\n"
+        PROGRAM_NAME " pcr current <configfile>\n"
+        "   Show selected PCRs from the System's Firmware (read from /sys/class/tpm/tpm0)\n"
+        "\n"
+        PROGRAM_NAME " pcr updated <configfile>\n"
+        "   Show selected the PCRs according to configfile\n"
+        "\n"
+        PROGRAM_NAME " help\n"
+        "   Prints this help message\n"
+        "\n"
+        "Configuration file JSON format:\n"
+        "  {\n"
+        "    \"key\": { \"name\": \"kmk\", \"size\": 32 },\n"
+        "    \"pcrlock\": {\n"
+        "      \"0\": { \"type\": \"pcr\" },\n"
+        "      \"4\": { \"type\": \"load-image\", \"paths\": [ \"/boot/EFI/BOOT/BOOTX64.EFI\", \"/boot/vmlinuz-linux\" ] },\n"
+        "      \"8\": { \"type\": \"systemd-boot-entry\", \"path\": \"/boot/loader/entries/linux.conf\" }\n"
+        "    }\n"
+        "  }\n"
+        "\n"
+        "The \"key\" section describes key name and length for newly created keys and key updates\n"
+        "  Keys are created in kernel, the kernel module trusted.ko must be loaded. Keys can be\n"
+        "  inspected using the keyctl utility.\n"
+        "The \"pcrlock\" section lists PCRs for sealing the key, the following types are recognized:\n"
+        "  \"pcr\" read the PCR from the Firmware and use it for sealing\n"
+        "  \"load-image\" create PCR 4 hash from the list in \"paths\"\n"
+        "  \"systemd-boot-entry\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n");
 }
 
 #if SEALKEY_DEBUG_OUT
@@ -900,7 +904,7 @@ int main(int argc, char* argv[]) {
                 if (pcr_updated_command(configuration))
                     ret = 0;
             } else {
-                print_usage();
+                printf("Unknown command: %s\n", argv[1]);
                 goto cleanup;
             }
 
@@ -923,7 +927,7 @@ int main(int argc, char* argv[]) {
                     outfile = argv[3];
                 } else if (argc == 3) {
                 } else {
-                    print_usage();
+                    printf("Illegal number of arguments: %d\n", argc);
                     goto cleanup;
                 }
 
@@ -934,7 +938,7 @@ int main(int argc, char* argv[]) {
                     outfile = argv[3];
                 } else if (argc == 3) {
                 } else {
-                    print_usage();
+                    printf("Illegal number of arguments: %d\n", argc);
                     goto cleanup;
                 }
 
@@ -945,7 +949,7 @@ int main(int argc, char* argv[]) {
                     outfile = argv[3];
                 } else if (argc == 3) {
                 } else {
-                    print_usage();
+                    printf("Illegal number of arguments: %d\n", argc);
                     goto cleanup;
                 }
 
@@ -963,7 +967,7 @@ int main(int argc, char* argv[]) {
                         infile = argv[3];
                 } else if (argc == 3) {
                 } else {
-                    print_usage();
+                    printf("Illegal number of arguments: %d\n", argc);
                     goto cleanup;
                 }
 
@@ -977,7 +981,7 @@ int main(int argc, char* argv[]) {
                 } else if (argc == 4) {
                     infile = argv[3];
                 } else {
-                    print_usage();
+                    printf("Illegal number of arguments: %d\n", argc);
                     goto cleanup;
                 }
 
@@ -985,7 +989,7 @@ int main(int argc, char* argv[]) {
                     ret = 0;
 #endif // USE_TSPI
             } else {
-                print_usage();
+                printf("Unknown command: %s\n", argv[1]);
                 goto cleanup;
             }
 
@@ -993,9 +997,16 @@ int main(int argc, char* argv[]) {
             CRYPTO_cleanup_all_ex_data();
             configfile_free(configuration);
     	}
-    } else {
-		print_usage();
-	}
+    } else if (argc == 2) {
+		if (strcmp(argv[1], "help") == 0) {
+            print_usage();
+            ret = 0;
+        } else {
+            printf("Unknown command: %s\n", argv[1]);
+        }
+	} else {
+        printf("Illegal number of arguments: %d\n", argc);
+    }
 
 #if SEALKEY_DEBUG_OUT
     CRYPTO_mem_leaks_cb(crypto_mem_leak_cb); 

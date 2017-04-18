@@ -10,7 +10,7 @@ license=('BSD')
 depends=('json-c' 'keyutils' 'openssl' 'tpm-tools' 'trousers' )
 makedepends=('git')
 
-git_commit=3159f2b0eb11dbfe397a310fe4419739cd527b34
+git_commit=b4cce897a65191f77ccf8d73e27ac222979775a0
 
 source=("${pkgname}::git+${url}#commit=${git_commit}")
 		
