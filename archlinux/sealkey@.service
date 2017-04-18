@@ -3,5 +3,5 @@ Description = Seal encryption key for TPM
 
 [Service]
 EnvironmentFile = /etc/sealkey/paths.env
-ExecStart = /usr/bin/sealkey tpm_update /etc/sealkey/%i.json $KEY_PATH/tpm-%i.enc $KEY_PATH/tpm-%i.enc
+ExecStart = /usr/bin/sealkey tpm_seal /etc/sealkey/%i.json ${UNENCRYPTED_KEYFILE} ${KEY_PATH}/tpm-%i.enc
 

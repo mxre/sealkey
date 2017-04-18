@@ -995,11 +995,15 @@ int main(int argc, char* argv[]) {
     cleanup:
             CRYPTO_cleanup_all_ex_data();
             configfile_free(configuration);
-    	} else if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
-            print_usage();
-            ret = 0;
+    	} else if (argc > 1) {
+                if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+                print_usage();
+                ret = 0;
+            } else {
+                printf("Unknown command: %s\n", argv[1]);
+            }
         } else {
-            printf("Illegal number of arguments: %d\n", argc);
+            printf("No command provided\n");
         }
 
 #if SEALKEY_DEBUG_OUT
