@@ -886,32 +886,18 @@ int main(int argc, char* argv[]) {
 #endif
 
     if (argc > 2) {
-        if (strcmp(argv[1], "pcr") == 0 && argc > 3) {
             json_object_t configuration = NULL;
-            if (!configfile_read(argv[3], &configuration))
-                return 1;
-            
-            if (json_object_get_type(configuration) != json_type_object) {
-                fprintf(stderr, "Error: Configuration is not a JSON object\n");
-                configfile_free(configuration);
-                return 1;
+            int configuration_option = 2;
+            if (strcmp(argv[1], "pcr") == 0) {
+                if (argc > 3) {
+                    configuration_option = 3;
+                } else {
+                    printf("Illegal number of arguments: %d\n", argc);
+                    return 1;
+                }
             }
 
-            if (strcmp(argv[2], "current") == 0) {
-                if (pcr_current_command(configuration))
-                    ret = 0;
-            } else if (strcmp(argv[2], "updated") == 0) {
-                if (pcr_updated_command(configuration))
-                    ret = 0;
-            } else {
-                printf("Unknown command: %s\n", argv[1]);
-                goto cleanup;
-            }
-
-            configfile_free(configuration);
-        } else {
-            json_object_t configuration = NULL;
-            if (!configfile_read(argv[2], &configuration))
+            if (!configfile_read(argv[configuration_option], &configuration))
                 return 1;
             
             if (json_object_get_type(configuration) != json_type_object) {
@@ -988,25 +974,33 @@ int main(int argc, char* argv[]) {
                 if (tpm_update_command(configuration, infile, outfile))
                     ret = 0;
 #endif // USE_TSPI
+            } else if (strcmp(argv[1], "pcr") == 0 && argc > 3) {
+                if (strcmp(argv[2], "current") == 0) {
+                    if (pcr_current_command(configuration))
+                        ret = 0;
+                } else if (strcmp(argv[2], "updated") == 0) {
+                    if (pcr_updated_command(configuration))
+                        ret = 0;
+                } else {
+                    printf("Unknown sub command: %s\n", argv[2]);
+                    goto cleanup;
+                }
+            } else if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+                print_usage();
+                ret = 0;
             } else {
                 printf("Unknown command: %s\n", argv[1]);
                 goto cleanup;
             }
-
     cleanup:
             CRYPTO_cleanup_all_ex_data();
             configfile_free(configuration);
-    	}
-    } else if (argc == 2) {
-		if (strcmp(argv[1], "help") == 0) {
+    	} else if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
             print_usage();
             ret = 0;
         } else {
-            printf("Unknown command: %s\n", argv[1]);
+            printf("Illegal number of arguments: %d\n", argc);
         }
-	} else {
-        printf("Illegal number of arguments: %d\n", argc);
-    }
 
 #if SEALKEY_DEBUG_OUT
     CRYPTO_mem_leaks_cb(crypto_mem_leak_cb); 
