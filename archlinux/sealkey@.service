@@ -1,5 +1,7 @@
 [Unit]
 Description = Seal encryption key for TPM
+Requires=tcsd.service
+After=tcsd.service
 
 [Service]
 EnvironmentFile = /etc/sealkey/paths.env
