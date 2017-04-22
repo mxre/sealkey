@@ -1,7 +1,7 @@
 # Maintainer: Max Resch <resch.max@gmail.com>
 
 pkgname=sealkey
-pkgver=0.1
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Create TPM sealed files using PCR calculated in advance"
 arch=('x86_64')
@@ -10,7 +10,7 @@ license=('BSD')
 depends=('json-c' 'keyutils' 'openssl' 'tpm-tools' 'trousers' )
 makedepends=('git')
 
-git_commit=984c562834309fc665f830f8dd5493da9a905aa2
+git_commit=32ed5c9634e9901581225e49103ded24c634ac65
 
 source=("${pkgname}::git+${url}#commit=${git_commit}")
 sha256sums=('SKIP')
