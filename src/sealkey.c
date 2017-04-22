@@ -1138,20 +1138,24 @@ static inline void print_usage() {
         "Configuration file JSON format:\n"
         "  {\n"
         "    \"key\": { \"name\": \"kmk\", \"size\": 32 },\n"
+        "    \"bootloader\": { \"type\": \"systemd-boot\", \"entry\": \"linux\" },\n"
         "    \"pcrlock\": {\n"
         "      \"0\": { \"type\": \"pcr\" },\n"
-        "      \"4\": { \"type\": \"load-image\", \"paths\": [ \"/boot/EFI/BOOT/BOOTX64.EFI\", \"/boot/vmlinuz-linux\" ] },\n"
-        "      \"8\": { \"type\": \"systemd-boot-entry\", \"path\": \"/boot/loader/entries/linux.conf\" }\n"
+        "      \"4\": { \"type\": \"load-image\", \"paths\": [ \"EFI/BOOT/BOOTX64.EFI\", \"$linux\" ] },\n"
+        "      \"8\": { \"type\": \"entry-cmdline\" }\n"
         "    }\n"
         "  }\n"
         "\n"
         "The \"key\" section describes key name and length for newly created keys and key updates\n"
         "  Keys are created in kernel, the kernel module trusted.ko must be loaded. Keys can be\n"
         "  inspected using the keyctl utility.\n"
+        "The \"bootloader\" section defines the systemd-boot entry used for getting the kernel\n"
+        "   cmdline and path for the kernel image.\n"
+        "   Optinally the ESP path can be changed with \"esp\" it defaults to \"/boot\".\n"
         "The \"pcrlock\" section lists PCRs for sealing the key, the following types are recognized:\n"
         "  \"pcr\" read the PCR from the Firmware and use it for sealing\n"
-        "  \"load-image\" create PCR 4 hash from the list in \"paths\"\n"
-        "  \"systemd-boot-entry\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n");
+        "  \"load-image\" create PCR 4 hash from the list in \"paths\", \"$linux\" refers to the kernel\n"
+        "  \"entry-cmdline\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n");
 }
 
 #if SEALKEY_DEBUG_OUT
