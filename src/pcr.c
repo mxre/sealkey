@@ -1,4 +1,6 @@
 /**
+ * @file
+ *
  * @copyright
  * Copyright 2017 Max Resch
  * <BR>
@@ -41,11 +43,7 @@
 #include <openssl/sha.h>
 
 #include "util.h"
-
-// path to the sysfs TPM
-#define SYSFS_TPM_PATH "/sys/class/tpm/tpm0"
-
-#define PCR_DEBUG_OUT 0
+#include "defines.h"
 
 bool pcr_ctx_from_system(pcr_ctx_t* ctx) {
 	bool ret = false;
@@ -103,8 +101,9 @@ bool pcr_ctx_from_system(pcr_ctx_t* ctx) {
         }
 
 #if PCR_DEBUG_OUT
-        printf("PCR[%02d] ", i);
-        print_hex(ctx->pcrs[i].digest, TPM12_HASH_LEN);
+        printf(" % 2d ", i);
+        print_md(ctx->pcrs[i].digest);
+        printf("\n");
 #endif
     }
 	

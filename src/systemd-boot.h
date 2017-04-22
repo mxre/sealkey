@@ -1,5 +1,6 @@
 /**
  * @file
+ * @brief Parsing and utilities for systemd-boot conf files
  *
  * @copyright
  * Copyright 2017 Max Resch
@@ -28,67 +29,35 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "configfile.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#pragma once
+#ifndef _SYSTEMD_BOOT_H
+#define _SYSTEMD_BOOT_H
+
 #include <stdbool.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <assert.h>
-#include <json-c/json.h>
 
-bool configfile_read(const char* path, json_object_t* configuration) {
-    assert(configuration);
-    assert(path);
+/**
+ * Open the file and put contents in allocated buffer
+ */
+bool systemd_boot_open(const char* file, char** buffer);
 
-    int fd = -1;
-    struct json_tokener* tok = NULL;
-    struct json_object* cfg_file = NULL;
-    char* buffer = NULL;
-    bool ret = false;
-    
-    fd = open(path, O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "Error: open: %m\n");
-        goto cleanup;
-    }
+/**
+ * Parse an option and copy it's contents to another buffer
+ *
+ * @param[in] buffer
+ *       Buffer holding the boot options configuration file
+ * @param[in,out] pos
+ *       If this is set to a pointer, parsing will begin from this position,
+ *       and a pointer past the end of the option will be written to that pointer.
+ *       On first call set it to a pointer variable with `NULL` to start parsing
+ *       from the beginning.
+ *       Can be set to `NULL`, were no position is returned and the whole file is parsed.
+ * @param[in] opt_name
+ *       Name of the option
+ * @param[out] value
+ *       Value of the option, buffer must be large enough
+ * @returns length of the string written to `value`
+ */
+int systemd_boot_parse_option(char* buffer, char** pos, const char* opt_name, char* value);
 
-    off_t buf_len = lseek(fd, 0, SEEK_END);
-    if (buf_len < 0) {
-        fprintf(stderr, "Error: seek: %m\n");
-        goto cleanup;
-    }
-    lseek(fd, 0, SEEK_SET);
-
-    buffer = malloc(buf_len);
-    if (buffer == NULL) {
-        fprintf(stderr, "Error: malloc: %m\n");
-        goto cleanup;
-    }
-
-    if (read(fd, buffer, buf_len) < 0) {
-        fprintf(stderr, "Error: read: %m\n");
-        goto cleanup;
-    }
-
-    tok = json_tokener_new();
-    cfg_file = json_tokener_parse_ex(tok, buffer, buf_len);
-    if (cfg_file == NULL) {
-        const char* json_error = json_tokener_error_desc(json_tokener_get_error(tok));
-        fprintf(stderr, "Error: json_parse: %s\n", json_error);
-        goto cleanup;
-    }
-
-    *configuration = cfg_file;
-    ret = true;
-cleanup:
-    if (tok)
-        json_tokener_free(tok);
-    if (fd >= 0)
-        close(fd);
-    if (buffer)
-        free(buffer);
-
-    return ret;
-}
+#endif // _SYSTEMD_BOOT_H

@@ -37,6 +37,11 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "tpm12_types.h"
+
+/**
+ * Print a data as a string of hexadecimals, followed by a newline
+ */
 static inline void print_hex(uint8_t* data, uint32_t len) {
 	for (uint32_t i = 0; i < len; i++) {
 		printf("%02hhx", *(data + i));
@@ -44,6 +49,19 @@ static inline void print_hex(uint8_t* data, uint32_t len) {
 	printf("\n");
 }
 
+/**
+ * Print a SHA1 message Digest
+ */
+static inline void print_md(tpm_hash_t* md) {
+    uint8_t* d = (uint8_t*) md;
+    printf(TPM12_HASH_FORMAT_STRING,
+            d[0],  d[1],  d[2],  d[3],  d[4],  d[5],  d[6],  d[7],  d[8],  d[9],
+           d[10], d[11], d[12], d[13], d[14], d[15], d[16], d[17], d[18], d[19]);
+}
+
+/**
+ * Arbitrary hex string creation
+ */
 static inline void hex_string(char* out, uint8_t* data, uint32_t len) {
 	uint32_t i = 0;
 	for (; i < len; i++) {

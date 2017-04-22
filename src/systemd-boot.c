@@ -28,27 +28,63 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "configfile.h"
+
+#include "systemd-boot.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
-#include <json-c/json.h>
 
-bool configfile_read(const char* path, json_object_t* configuration) {
-    assert(configuration);
-    assert(path);
+int systemd_boot_parse_option(char* buffer, char** pos, const char* opt_name, char* value) {
+    assert(buffer);
+    assert(opt_name);
+    assert(value);
+    
+    char* bf;
+	if (pos == NULL)
+		bf = buffer;
+	else
+		bf = *pos == NULL ? buffer : *pos;
+
+    char name[128];
+    int name_len = snprintf(name, 127, "\n%s ", opt_name);
+
+    char* options = strstr(bf, name);
+    if (options == NULL)
+        return -1;
+    
+    options += name_len;
+    char* options_end = strchr(options, '\n');
+    size_t len;
+    for (; isspace(*options); options++);
+    if (options_end != NULL)
+        len = options_end - options;
+    else
+        len = strlen(options);
+    assert(len > 0);
+    for (; isspace(options[len - 1]); len--);
+    if (pos != NULL)
+	    *pos = options_end;
+
+    strncpy(value, options, len);
+    value[len] = 0;
+
+    return len;
+}
+
+bool systemd_boot_open(const char* file, char** buffer) {
+    assert(file);
+    assert(buffer);
 
     int fd = -1;
-    struct json_tokener* tok = NULL;
-    struct json_object* cfg_file = NULL;
-    char* buffer = NULL;
     bool ret = false;
     
-    fd = open(path, O_RDONLY);
+    fd = open(file, O_RDONLY);
     if (fd < 0) {
         fprintf(stderr, "Error: open: %m\n");
         goto cleanup;
@@ -61,34 +97,27 @@ bool configfile_read(const char* path, json_object_t* configuration) {
     }
     lseek(fd, 0, SEEK_SET);
 
-    buffer = malloc(buf_len);
-    if (buffer == NULL) {
+    *buffer = malloc(buf_len + 1);
+    if (*buffer == NULL) {
         fprintf(stderr, "Error: malloc: %m\n");
         goto cleanup;
     }
 
-    if (read(fd, buffer, buf_len) < 0) {
+    if (read(fd, *buffer, buf_len) < 0) {
         fprintf(stderr, "Error: read: %m\n");
         goto cleanup;
     }
 
-    tok = json_tokener_new();
-    cfg_file = json_tokener_parse_ex(tok, buffer, buf_len);
-    if (cfg_file == NULL) {
-        const char* json_error = json_tokener_error_desc(json_tokener_get_error(tok));
-        fprintf(stderr, "Error: json_parse: %s\n", json_error);
-        goto cleanup;
-    }
-
-    *configuration = cfg_file;
+    (*buffer)[buf_len] = '\0';
     ret = true;
+
 cleanup:
-    if (tok)
-        json_tokener_free(tok);
     if (fd >= 0)
         close(fd);
-    if (buffer)
-        free(buffer);
+    if (!ret && *buffer == NULL) {
+        free(*buffer);
+        *buffer = NULL;
+    }
 
     return ret;
 }

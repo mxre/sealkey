@@ -10,7 +10,7 @@ license=('BSD')
 depends=('json-c' 'keyutils' 'openssl' 'tpm-tools' 'trousers' )
 makedepends=('git')
 
-git_commit=8915f8debdb863f233a970b2fabd274ee8bb5a2f
+git_commit=984c562834309fc665f830f8dd5493da9a905aa2
 
 source=("${pkgname}::git+${url}#commit=${git_commit}")
 sha256sums=('SKIP')
@@ -34,4 +34,3 @@ package() {
 	install -Dm644 "${pkgname}/archlinux/seal.json" "${pkgdir}/etc/sealkey/linux.json"
 	install -Dm644 "${pkgname}/archlinux/paths.env" "${pkgdir}/etc/sealkey/paths.env"
 }
-

@@ -1,4 +1,6 @@
 /**
+ * @file
+ *
  * @copyright
  * Copyright 2017 Max Resch
  * <BR>
@@ -36,133 +38,54 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
-#include <ctype.h>
 #include <uchar.h>
 #include <assert.h>
 
 #include <openssl/sha.h>
 #include "tpm12_chain.h"
+#include "systemd-boot.h"
+#include "defines.h"
 
-/**
- * length of the static buffer we use for the options
- */
-#define KERNEL_PARAMS_BUFFER_LEN 1024
+bool initrd_measure1(const char* initrd, tpm_hash_t* digest) {
+    int fd;
+    uint8_t* buffer = NULL;
+    ssize_t len;
 
-int parse_boot_option(char* bf, char** pos, const char* opt_name, char* value) {
-    assert(bf);
-    assert(opt_name);
-    assert(value);
-    
-    char* buffer;
-	if (pos == NULL)
-		buffer = bf;
-	else
-		buffer = *pos == NULL ? bf : *pos;
-
-    char name[128];
-    int name_len = snprintf(name, 127, "\n%s ", opt_name);
-
-    char* options = strstr(buffer, name);
-    if (options == NULL)
-        return -1;
-    
-    options += name_len;
-    char* options_end = strchr(options, '\n');
-    size_t len;
-    for (; isspace(*options); options++);
-    if (options_end != NULL)
-        len = options_end - options;
-    else
-        len = strlen(options);
-    assert(len > 0);
-    for (; isspace(options[len - 1]); len--);
-    if (pos != NULL)
-	    *pos = options_end;
-
-    strncpy(value, options, len);
-    value[len] = 0;
-
-    return len;
-}
-
-static inline bool kernel_params_open(const char* file, char** buffer) {
-    assert(file);
-    assert(buffer);
-
-    int fd = -1;
-    bool ret = false;
-    
-    fd = open(file, O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "Error: open: %m\n");
-        goto cleanup;
+    if ((fd  = open(initrd, O_RDONLY)) < 0) {
+        fprintf(stderr, "open: %m\n");
+        return false;
     }
-
-    off_t buf_len = lseek(fd, 0, SEEK_END);
-    if (buf_len < 0) {
-        fprintf(stderr, "Error: seek: %m\n");
-        goto cleanup;
+    
+    if ((len = lseek(fd, 0, SEEK_END)) < 0) {
+        fprintf(stderr, "seek: %m\n");
+        close(fd);
+        return false;
     }
     lseek(fd, 0, SEEK_SET);
+    buffer = malloc(len);
 
-    *buffer = malloc(buf_len + 1);
-    if (*buffer == NULL) {
-        fprintf(stderr, "Error: malloc: %m\n");
-        goto cleanup;
-    }
-
-    if (read(fd, *buffer, buf_len) < 0) {
-        fprintf(stderr, "Error: read: %m\n");
-        goto cleanup;
-    }
-
-    (*buffer)[buf_len] = '\0';
-    ret = true;
-
-cleanup:
-    if (fd >= 0)
+    if (read(fd, buffer, (size_t) len) != len) {
+        fprintf(stderr, "read: %m\n");
+        free(buffer);
         close(fd);
-    if (!ret && *buffer == NULL) {
-        free(*buffer);
-        *buffer = NULL;
+        return false;
     }
+    close(fd);
 
-    return ret;
+    SHA1(buffer, len, (uint8_t*) digest);
+
+#if MEASURE_CMDLINE_DEBUG_OUT
+    print_md(digest);
+    printf("  %s: %zu\n", initrd, len);
+#endif
+
+    free(buffer);
+    return true;
 }
 
-bool kernel_params_measure1(const char* file, tpm_hash_t* digest) {
-    bool ret = false;
-    char* buffer = NULL;
-
-    if (!kernel_params_open(file, &buffer)) {
-        goto cleanup;
-    }
-
-    char result[KERNEL_PARAMS_BUFFER_LEN];
-    char option[KERNEL_PARAMS_BUFFER_LEN];
-    char* tok = NULL;
+bool kernel_params_measure1(const char* cmdline, tpm_hash_t* digest) {
     int offset = 0;
-    int len = 0;
-
-    // initrd may be passed multiple times
-    while ((len = parse_boot_option(buffer, &tok, "initrd", option)) > 0) {
-        offset += sprintf(result + offset, "initrd=%s ", option);
-    }
-
-    // initrd are passed as EFI file paths, relative to ESP root
-    // so all / are infact \ (see /proc/cmdline)
-    for (char* iter = result; iter - result < offset && *iter != 0; iter++) {
-        if (*iter == '/')
-            *iter = '\\';
-    }
-
-    // reset
-    tok = NULL;
-    // parse actual kernel parameters
-    if ((len = parse_boot_option(buffer, &tok, "options", result + offset)) > 0) {
-        offset += len;
-        result[offset] = 0;
-    }
+    offset = strlen(cmdline);
 
     // include the NULL at the end of the string
     offset += 1;
@@ -173,14 +96,15 @@ bool kernel_params_measure1(const char* file, tpm_hash_t* digest) {
     memset(&state, 0, sizeof(state));
 
     for(int i = 0; i < offset; i++) {
-        mbrtoc16(&dest[i], &result[i], 1, &state);
+        mbrtoc16(&dest[i], &cmdline[i], 1, &state);
     }
 
     SHA1((uint8_t*) dest, offset * 2, (uint8_t*) digest);
-    ret = true;
-cleanup:
-    if (buffer != NULL)
-        free(buffer);
 
-    return ret;
+#if MEASURE_CMDLINE_DEBUG_OUT
+    print_md(digest);
+    printf("  bootops\n");
+#endif
+
+    return true;
 }

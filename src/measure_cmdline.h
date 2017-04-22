@@ -39,23 +39,9 @@
 #include "tpm12_types.h"
 
 /**
- * Parse an option and copy it's contents to another buffer
- *
- * @param[in] buffer
- *       Buffer holding the boot options configuration file
- * @param[in,out] pos
- *       If this is set to a pointer, parsing will begin from this position,
- *       and a pointer past the end of the option will be written to that pointer.
- *       On first call set it to a pointer variable with `NULL` to start parsing
- *       from the beginning.
- *       Can be set to `NULL`, were no position is returned and the whole file is parsed.
- * @param[in] opt_name
- *       Name of the option
- * @param[out] value
- *       Value of the option, buffer must be large enough
- * @returns length of the string written to `value`
+ * Create a hash for a initrd
  */
-int parse_boot_option(char* buffer, char** pos, const char* opt_name, char* value);
+bool initrd_measure1(const char* initrd, tpm_hash_t* digest);
 
 /**
  * Measure the kernel boot parameters the same way `systemd-boot` does.
@@ -64,13 +50,12 @@ int parse_boot_option(char* buffer, char** pos, const char* opt_name, char* valu
  * the kernel paramters passed to the EFI stup before invocation.
  * The default setting for systemd is to use PCR 8 for this measure.
  *
- * The resulting digest still has to be chained to be quivalent to the one
- * in PCR 8.
+ * The resulting digest still has to be chained to be equivalent to
+ * the one in PCR 8.
  *
- * @param file A path to the boot configuration file containing the parameters,
- *             i.e. `/boot/loader/entries/linux.conf`
+ * @param cmdline kernel command line as in `/proc/cmdline`.
  * @param[out] digest SHA1 digests
  */
-bool kernel_params_measure1(const char* file, tpm_hash_t* digest);
+bool kernel_params_measure1(const char* cmdline, tpm_hash_t* digest);
 
 #endif //_MEASURE_CMDLINE_H

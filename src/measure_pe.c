@@ -1,4 +1,6 @@
 /**
+ * @file
+ *
  * @copyright
  * Copyright 2017 Max Resch
  * <BR>
@@ -43,8 +45,7 @@
 #include "pe.h"
 #include "util.h"
 #include "tpm12_types.h"
-
-#define MEASURE_PE_DEBUG_OUT 0
+#include "defines.h"
 
 // hash a PE executabale the same way LoadImage() would do in
 // EFI, based on code from OVMF
@@ -245,7 +246,8 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	SHA1_Final((uint8_t*) hash, &ctx);
 
 #if MEASURE_PE_DEBUG_OUT
-	print_hex((uint8_t*) hash, SHA_DIGEST_LENGTH);
+	print_md(hash);
+    printf(" %s\n", file);
 #endif
 
 	ret = true;

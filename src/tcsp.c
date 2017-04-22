@@ -1,4 +1,6 @@
 /**
+ * @file
+ *
  * @copyright
  * Copyright 2017 Max Resch
  * <BR>
@@ -39,8 +41,10 @@
 #include <openssl/bio.h>
 
 #include <tss/tspi.h>
+// needed for error handling
 #include <trousers/trousers.h>
 
+// tpm_unseal.h has bad includes
 #define BOOL bool
 #include <tpm_tools/tpm_unseal.h>
 

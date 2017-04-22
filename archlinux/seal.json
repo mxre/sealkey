@@ -1,4 +1,16 @@
 {
+  "key": {
+    // key size in bytes
+    "size": 64,
+    // name of the key in kernel key ring
+    "name": "kmk"
+  },
+  "bootloader": {
+    "type": "systemd-boot",
+    "esp": "/boot",
+    // use $esp/loader/entries/$entry.conf
+    "entry": "arch"
+  },
   "pcrlock": {
     "0": { "type": "pcr" },
     "1": { "type": "pcr" },
@@ -7,15 +19,19 @@
     "4": {
       "type": "load-image",
       "paths": [
-        "/boot/EFI/systemd/systemd-bootx64.efi",
-        "/boot/vmlinuz-linux"
+        // relative (ESP) path for bootloader (shim)
+        "EFI/systemd/bootx64.efi",
+        // This adds the entry from the bootloader
+        "$linux"
       ]
     },
     "5": { "type": "pcr" },
     "7": { "type": "pcr" },
     "8": {
-      "type": "systemd-boot-entry",
-      "path": "/boot/loader/entries/arch.conf"
+      // use the cmdline + initrd from bootloader
+      "type": "entry-cmdline",
+      // optional adds hash for initrd (needs patched systemd-boot)
+      "initrd": true
     }
   }
 }

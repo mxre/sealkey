@@ -63,7 +63,7 @@ static inline void TPM12_Chain_Init(TPM12_Chain_Context* ctx) {
  *
  * @relates TPM12_Chain_Context
  */
-static inline void TPM12_Chain_Update(TPM12_Chain_Context* ctx, tpm_hash_t* hash) {
+static inline void TPM12_Chain_Update(TPM12_Chain_Context* ctx, const tpm_hash_t* hash) {
 	memcpy(&ctx->digest[1], hash, TPM12_HASH_LEN);
     SHA1_Init(&ctx->ctx);
 	SHA1_Update(&ctx->ctx, (uint8_t*) ctx->digest, 2 * TPM12_HASH_LEN);

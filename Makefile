@@ -6,6 +6,7 @@ SOURCES = \
 	src/sealkey.c \
 	src/pcr.c \
 	src/configfile.c \
+	src/systemd-boot.c \
 	src/measure_pe.c \
 	src/measure_cmdline.c
 
@@ -22,7 +23,7 @@ BINARY = sealkey
 
 # don't print build commands
 .SILENT:
-.PHONY: all clean dist debug doc
+.PHONY: all clean dist debug doc open-doc
 
 OBJECTS = $(patsubst src/%.c,obj/%.o,$(SOURCES))
 
@@ -59,5 +60,8 @@ clean:
 doc: doc/doxygen.cfg
 	@echo -e "\x1b[34mGEN\x1b[0m  doxygen"
 	doxygen $<
+
+open-doc: doc
+	xdg-open doc/html/index.html
 
 -include $(OBJECTS:.o=.d)

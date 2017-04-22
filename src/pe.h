@@ -1,5 +1,5 @@
 /**
- * @file pe.h
+ * @file
  * @brief PE32, PE32+ image structs and defines
  *
  * EFI image format for PE32, PE32+ and TE. Please note some data structures are 

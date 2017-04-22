@@ -46,4 +46,17 @@
  */
 typedef struct { uint8_t digest[TPM12_HASH_LEN]; } tpm_hash_t;
 
+#define _EV_SEPERATOR { 0x90, 0x69, 0xca, 0x78, 0xe7, 0x45, 0x0a, 0x28, 0x51, 0x73, 0x43, 0x1b, 0x3e, 0x52, 0xc5, 0xc2, 0x52, 0x99, 0xe4, 0x73 }
+
+/**
+ * Event Seperator Hash
+ */
+extern const tpm_hash_t EV_SEPERATOR;
+
+/**
+ * Format String for a TMP12 hash
+ */
+#define TPM12_HASH_FORMAT_STRING    "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx" \
+                                    "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
+
 #endif // _TPM12_TYPES_H

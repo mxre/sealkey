@@ -1,5 +1,6 @@
 /**
  * @file
+ * @brief Common defined macro statements
  *
  * @copyright
  * Copyright 2017 Max Resch
@@ -28,67 +29,44 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#include "configfile.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <assert.h>
-#include <json-c/json.h>
+#pragma once
+#ifndef _DEFINES_H
+#define _DEFINES_H
 
-bool configfile_read(const char* path, json_object_t* configuration) {
-    assert(configuration);
-    assert(path);
+/**
+ * Name of the program
+ */
+#define PROGRAM_NAME "sealkey"
 
-    int fd = -1;
-    struct json_tokener* tok = NULL;
-    struct json_object* cfg_file = NULL;
-    char* buffer = NULL;
-    bool ret = false;
-    
-    fd = open(path, O_RDONLY);
-    if (fd < 0) {
-        fprintf(stderr, "Error: open: %m\n");
-        goto cleanup;
-    }
+/**
+ * Version of the program
+ */
+#define PROGRAM_VERSION "0.1.1"
 
-    off_t buf_len = lseek(fd, 0, SEEK_END);
-    if (buf_len < 0) {
-        fprintf(stderr, "Error: seek: %m\n");
-        goto cleanup;
-    }
-    lseek(fd, 0, SEEK_SET);
+/**
+ * length of the static buffer we use for the options
+ */
+#define KERNEL_PARAMS_BUFFER_LEN 4098
 
-    buffer = malloc(buf_len);
-    if (buffer == NULL) {
-        fprintf(stderr, "Error: malloc: %m\n");
-        goto cleanup;
-    }
+/**
+ * Path length for loader files on the EFI partition
+ */
+#define LOADER_ENTRY_PATH_LEN 255
 
-    if (read(fd, buffer, buf_len) < 0) {
-        fprintf(stderr, "Error: read: %m\n");
-        goto cleanup;
-    }
+/**
+ * Default mount point of the EFI System Partition
+ */
+#define EFI_SYSTEM_PARTITION_MOUNT_POINT "/boot"
 
-    tok = json_tokener_new();
-    cfg_file = json_tokener_parse_ex(tok, buffer, buf_len);
-    if (cfg_file == NULL) {
-        const char* json_error = json_tokener_error_desc(json_tokener_get_error(tok));
-        fprintf(stderr, "Error: json_parse: %s\n", json_error);
-        goto cleanup;
-    }
+/**
+ * Sysfs path to the system TPM device
+ */
+#define SYSFS_TPM_PATH "/sys/class/tpm/tpm0"
 
-    *configuration = cfg_file;
-    ret = true;
-cleanup:
-    if (tok)
-        json_tokener_free(tok);
-    if (fd >= 0)
-        close(fd);
-    if (buffer)
-        free(buffer);
+#define MEASURE_CMDLINE_DEBUG_OUT 0
+#define MEASURE_PE_DEBUG_OUT 0
+#define PCR_DEBUG_OUT 0
+#define SEALKEY_DEBUG_OUT 0
 
-    return ret;
-}
+#endif // _DEFINES_H
