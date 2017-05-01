@@ -101,8 +101,8 @@ bool pcr_ctx_from_system(pcr_ctx_t* ctx) {
         }
 
 #if PCR_DEBUG_OUT
-        printf(" % 2d ", i);
-        print_md(ctx->pcrs[i].digest);
+        printf("%02d ", i);
+        print_md(&ctx->pcrs[i]);
         printf("\n");
 #endif
     }

@@ -42,12 +42,11 @@
 #include <assert.h>
 #include <keyutils.h>
 
-#include <openssl/crypto.h>
-
 #include "configfile.h"
 #include "pcr.h"
 #include "measure_pe.h"
 #include "measure_cmdline.h"
+#include "efi_boot.h"
 #include "systemd-boot.h"
 #include "tpm12_types.h"
 #include "tpm12_chain.h"
@@ -255,6 +254,44 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
                 } else {
                     snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s/%s", entry->esp, entry->image_name);
                 }
+            } else if (strncasecmp("$efiboot:", relative_filename, 9) == 0) {
+                char* p = strchr(relative_filename, ':') + 1;
+                if (*p != '\0') {
+                    char path[LOADER_ENTRY_PATH_LEN];
+                    size_t len = sizeof(path);
+                    int ret;
+
+                    if (strcasecmp("default", p) == 0) {
+                        ret = efi_boot_get_default(path, len);
+                    } else if (strcasecmp("current", p) == 0) {
+                        ret = efi_boot_get_current(path, len);
+                    } else {
+                        char* r;
+                        int entry = strtol(p, &r, 10);
+                        if (entry == 0 && r == p) {
+                            fprintf(stderr, "Error: Cannot parse $efiboot entry: %s\n", p);
+                            return false;
+                        }
+                        
+                        ret = efi_boot_get_numbered(entry, path, len);
+                    }
+
+                    if (ret < 0) {
+                        fprintf(stderr, "Error: Cannot read $efiboot from efivars\n");
+                        return false;
+                    }
+
+                    assert((size_t) ret < sizeof(path));
+
+                    char* p = path;
+                    while((p = strchr(p, '\\')) != NULL)
+                        *p = '/';
+                    
+                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, path);
+                } else {
+                    fprintf(stderr, "Error: Illegal $efiboot entry\n");
+                    return false;
+                }
             } else {
                 if (relative_filename[0] == '/') {
                     snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, relative_filename);
@@ -269,11 +306,6 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
             fprintf(stderr, "Error: Could not calculate PE32+ image hash: %s\n", filename);
             return false;
         }
-
-#if SEALKEY_DEBUG_OUT
-		print_md(&digest);
-		printf(" %s\n", filename);
-#endif
 
         TPM12_Chain_Update(&chain_ctx, &digest);
     }
@@ -583,12 +615,6 @@ static bool generate_pcr_info_struct(json_object_t configuration, char* pcrinfo)
 	}
 	
     pcr_composite_get_info_hex(&composite, pcrinfo);
-#if SEALKEY_DEBUG_OUT
-    // printf("%s\n", pcrinfo);
-    //4  a32905cb0605b84c3651708d80837779fca0484d
-    //8  940e2c77b9d3301be61dcf1ce1c05859ef76daed
-    //000210016dd4ce2f5ea9a67953cd3717dd31fa9e3daf59740000000000000000000000000000000000000000
-#endif
 	ret = true;
 
 cleanup:
@@ -666,7 +692,7 @@ static key_serial_t seal_new_key(json_object_t configuration) {
 	
 	snprintf(parameters, len, "new %d pcrinfo=%s", key_length, pcrinfo_hex);
 #if SEALKEY_DEBUG_OUT
-	fprintf(stderr, "keyctl add trusted %s \"%s\" @u\n", key_name, parameters);
+	fprintf(stderr, "> keyctl add trusted %s \"%s\" @u\n", key_name, parameters);
 #endif
 	key_num = add_key("trusted", "kmk", parameters, strlen(parameters), KEY_SPEC_USER_KEYRING);
 	
@@ -781,7 +807,7 @@ static inline key_serial_t update_command(json_object_t configuration, char* out
 	
 	snprintf(parameters, len, "update pcrinfo=%s", pcrinfo_hex);
 #if SEALKEY_DEBUG_OUT
-	fprintf(stderr, "keyctl update %d \"%s\" @u\n", key_id, parameters);
+	fprintf(stderr, "> keyctl update %d \"%s\" @u\n", key_id, parameters);
 #endif
 	if (keyctl_update(key_id, parameters, strlen(parameters)) != 0) {
         fprintf(stderr, "Error keyctl_update: %m\n");
@@ -1141,7 +1167,7 @@ static inline void print_usage() {
         "    \"bootloader\": { \"type\": \"systemd-boot\", \"entry\": \"linux\" },\n"
         "    \"pcrlock\": {\n"
         "      \"0\": { \"type\": \"pcr\" },\n"
-        "      \"4\": { \"type\": \"load-image\", \"paths\": [ \"EFI/BOOT/BOOTX64.EFI\", \"$linux\" ] },\n"
+        "      \"4\": { \"type\": \"load-image\", \"paths\": [ \"$efiboot:default\", \"$linux\" ] },\n"
         "      \"8\": { \"type\": \"entry-cmdline\" }\n"
         "    }\n"
         "  }\n"
@@ -1154,24 +1180,13 @@ static inline void print_usage() {
         "   Optinally the ESP path can be changed with \"esp\" it defaults to \"/boot\".\n"
         "The \"pcrlock\" section lists PCRs for sealing the key, the following types are recognized:\n"
         "  \"pcr\" read the PCR from the Firmware and use it for sealing\n"
-        "  \"load-image\" create PCR 4 hash from the list in \"paths\", \"$linux\" refers to the kernel\n"
+        "  \"load-image\" create PCR 4 hash from the list in \"paths\", \n"
+        "     \"$linux\" refers to the kernel, \"$efiboot:{default,current,XXXX}\" to a EFI boot entry\n"
         "  \"entry-cmdline\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n");
 }
 
-#if SEALKEY_DEBUG_OUT
-static void* crypto_mem_leak_cb(unsigned long order, const char *file, int line, int num_bytes, void *addr) { 
-    fprintf(stderr, "Leak: Order: %7lu, File: %-28s, Line: %4d, Bytes: %5d, Addr: %p\n", order, file, line, num_bytes, addr); 
-    return addr; 
-}
-#endif
-
 int main(int argc, char* argv[]) {
     int ret = 1;
-
-#if SEALKEY_DEBUG_OUT
-    CRYPTO_malloc_debug_init();
-    CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-#endif
 
     if (argc > 2) {
             json_object_t configuration = NULL;
@@ -1293,10 +1308,6 @@ int main(int argc, char* argv[]) {
         } else {
             printf("No command provided\n");
         }
-
-#if SEALKEY_DEBUG_OUT
-    CRYPTO_mem_leaks_cb(crypto_mem_leak_cb); 
-#endif
 	
 	return ret;
 }

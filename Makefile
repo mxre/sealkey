@@ -1,5 +1,5 @@
-LIBRARIES = -lkeyutils -lcrypto -ljson-c 
-INCLUDES =
+LIBRARIES = -lkeyutils -lcrypto -ljson-c -lefivar
+INCLUDES = -I/usr/include/efivar
 
 # source files
 SOURCES = \
@@ -7,11 +7,12 @@ SOURCES = \
 	src/pcr.c \
 	src/configfile.c \
 	src/systemd-boot.c \
+	src/efi_boot.c \
 	src/measure_pe.c \
 	src/measure_cmdline.c
 
 # set required C flags
-CFLAGS += -std=c11 -D_FILE_OFFSET_BITS=64
+CFLAGS += -std=c11 #-D_FILE_OFFSET_BITS=64
 
 # enable TCSD support
 LIBRARIES += -ltspi -ltpm_unseal

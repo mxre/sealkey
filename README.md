@@ -18,6 +18,7 @@ Currently the following libraries are neccesary to build sealkey:
  - openssl
    `libcrypto` with AES-CBC, RSA and SHA1 support is needed. Other implementations like libressl might work too.
  - json-c
+ - libefivar
 
 Configuration
 -------------
@@ -37,7 +38,7 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
     "1": { "type": "pcr" },
     "2": { "type": "pcr" },
     "3": { "type": "pcr" },
-    "4": { "type": "load-image", "paths": [ "EFI/BOOT/BOOTX64.EFI", "$linux" ] },
+    "4": { "type": "load-image", "paths": [ "$efiboot:default", "$linux" ] },
     "5": { "type": "pcr" },
     "8": { "type": "entry-cmdline" }
   }
@@ -53,11 +54,15 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
  - The *pcrlock* section lists PCRs for sealing the key, the following types are recognized:
    - *pcr* read the PCR from the Firmware and use it for sealing, this type supports the optional
      key *value* that allows to set a SHA-1 hash directly in the configuration file.
-   - *load-image* create a PCR 4 hash from the list in *paths*, this should result in the same hash
-     that is created by the UEFI `LoadImage()` function, *paths* should have a list of UEFI applications
-     in the order they are called eg, first the Bootloader then the Kernel. The paths are
-     relative the the ESP. The value `$linux` is special as it uses the corresponding kernel
-     image filename from the boot configuration.
+   - *load-image* create a PCR 4 hash from the list in *paths*, this should result in the same
+     hash that is created by the UEFI `LoadImage()` function, *paths* should have a list of
+     UEFI applications in the order they are called eg, first the Bootloader then the Kernel.
+     The paths are relative the the ESP. There are also special value, that automatically
+     retrieve the paths:
+     - `$efiboot:default` and `$efiboot:current` read the first bootloader or current bootloader
+       from the EFI variables. Be careful when using `$efiboot:default` it uses the first oader
+       in the BootOrder list, if this is not an EFI executable e.g., a disk entry, it won't work.
+     - `$efiboot:XXXX` use the entry with the specified number, see output of `efimootmgr`.
    - *entry-cmdline* create a hash the same way systemd-boot creates PCR 8 from kernel parameters.
      If `systemd` is built with the `--enable-tpm` configure option, systemd-boot supports measuring
      the supplied kernel commandline, to a PCR specified at compile time. The default is PCR 8.

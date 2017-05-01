@@ -126,7 +126,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	// 1. Hash the image header from its base to beginning of the image checksum.
 	size = ((void*) &pe_image_header->OptionalHeader.CheckSum - pe_image);
 #if MEASURE_PE_DEBUG_OUT
-	printf("%08x - %08zx\n", 0, size);
+	printf("PE %08x - %08zx Header\n", 0, size);
 #endif
 	SHA1_Update(&ctx, base, size);
 	
@@ -136,7 +136,9 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
     	//    from the end of the checksum to the end of image header.
 		base = (void*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
 		size = pe_image_header->OptionalHeader.SizeOfHeaders - (size_t) (base - pe_image);
-		printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
+#if MEASURE_PE_DEBUG_OUT
+		printf("PE %08zx - %08zx Header\n", base - pe_image, base - pe_image + size);
+#endif
 		if (size != 0)
 			SHA1_Update(&ctx, base, size);
 	} else {
@@ -144,7 +146,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		base = (void*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
 		size = (size_t) ((void*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY] - base);
 #if MEASURE_PE_DEBUG_OUT
-		printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
+		printf("PE %08zx - %08zx Header\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
 			SHA1_Update(&ctx, base, size);
@@ -154,7 +156,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		base = (void*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY + 1];
 		size = pe_image_header->OptionalHeader.SizeOfHeaders - (size_t) (base - pe_image);
 #if MEASURE_PE_DEBUG_OUT
-		printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
+		printf("PE %08zx - %08zx Directory\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
 			SHA1_Update(&ctx, base, size);
@@ -206,7 +208,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		base = (void*) pe_image + section->PointerToRawData;
 		size = (size_t) section->SizeOfRawData;
 #if MEASURE_PE_DEBUG_OUT
-		printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
+		printf("PE %08zx - %08zx Section: %s\n", base - pe_image, base - pe_image + size, section->Name);
 #endif
 		if (size != 0)
 			SHA1_Update(&ctx, base, size);
@@ -228,18 +230,17 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		if (pe_image_header->OptionalHeader.NumberOfRvaAndSizes > EFI_IMAGE_DIRECTORY_ENTRY_SECURITY) {
 			cert_size = pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY].Size;
 		}
-		
+
 		if (filesize > cert_size + sum_of_bytes_hashed) {
 			size = filesize - cert_size - sum_of_bytes_hashed;
 #if MEASURE_PE_DEBUG_OUT
-			printf("%08zx - %08zx\n", base - pe_image, base - pe_image + size);
+			printf("PE %08zx - %08zx Extra data after image end\n", base - pe_image, base - pe_image + size);
 #endif
 			SHA1_Update(&ctx, base, size);
 		} else if (filesize < cert_size + sum_of_bytes_hashed) {
 			fprintf(stderr, "Error: corruption in section directory\n");
 			goto cleanup;
 		}
-					
 	}
 	
 	// 8. Finalize the hash

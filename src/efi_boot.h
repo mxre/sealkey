@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Common defined macro statements
+ * @brief Getting EFI boot entries
  *
  * @copyright
  * Copyright 2017 Max Resch
@@ -31,51 +31,38 @@
  */
 
 #pragma once
-#ifndef _DEFINES_H
-#define _DEFINES_H
+#ifndef _EFI_BOOT_H
+#define _EFI_BOOT_H
+
+#include <stddef.h>
+#include <stdint.h>
 
 /**
- * Name of the program
+ * Get the default boot entry
+ *
+ * @param[out] path to the EFI executable (or NULL, only return value os provided)
+ * @para[in] len length of the buffer, pointed to by path.
+ * @retruns length of the path
  */
-#define PROGRAM_NAME "sealkey"
+int efi_boot_get_default(char* path, size_t len);
 
 /**
- * Version of the program
+ * Get the current boot entry
+ *
+ * @param[out] path to the EFI executable (or NULL, only return value os provided)
+ * @para[in] len length of the buffer, pointed to by path.
+ * @retruns length of the path
  */
-#define PROGRAM_VERSION "0.1.2"
+int efi_boot_get_current(char* path, size_t len);
 
 /**
- * length of the static buffer we use for the options
+ * Get the a boot entry with the privided number
+ *
+ * @param[in] entry nu,ber of the EFI boot entry
+ * @param[out] path to the EFI executable (or NULL, only return value os provided)
+ * @para[in] len length of the buffer, pointed to by path.
+ * @retruns length of the path
  */
-#define KERNEL_PARAMS_BUFFER_LEN 4098
+int efi_boot_get_numbered(const uint16_t entry, char* path, size_t len);
 
-/**
- * Path length for loader files on the EFI partition
- */
-#define LOADER_ENTRY_PATH_LEN 255
-
-/**
- * Default mount point of the EFI System Partition
- */
-#define EFI_SYSTEM_PARTITION_MOUNT_POINT "/boot"
-
-/**
- * Sysfs path to the system TPM device
- */
-#define SYSFS_TPM_PATH "/sys/class/tpm/tpm0"
-
-#ifdef DEBUG
-#define MEASURE_CMDLINE_DEBUG_OUT 1
-#define MEASURE_PE_DEBUG_OUT 1
-#define PCR_DEBUG_OUT 1
-#define SEALKEY_DEBUG_OUT 1
-#define EFI_DEBUG_OUT 1
-#else
-#define MEASURE_CMDLINE_DEBUG_OUT 0
-#define MEASURE_PE_DEBUG_OUT 0
-#define PCR_DEBUG_OUT 0
-#define SEALKEY_DEBUG_OUT 0
-#define EFI_DEBUG_OUT 0
-#endif
-
-#endif // _DEFINES_H
+#endif // _EFI_BOOT_H

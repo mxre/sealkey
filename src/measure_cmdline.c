@@ -76,7 +76,7 @@ bool initrd_measure1(const char* initrd, tpm_hash_t* digest) {
 
 #if MEASURE_CMDLINE_DEBUG_OUT
     print_md(digest);
-    printf("  %s: %zu\n", initrd, len);
+    printf(" %s\n", initrd);
 #endif
 
     free(buffer);
@@ -103,7 +103,7 @@ bool kernel_params_measure1(const char* cmdline, tpm_hash_t* digest) {
 
 #if MEASURE_CMDLINE_DEBUG_OUT
     print_md(digest);
-    printf("  bootops\n");
+    printf(" %s\n", cmdline);
 #endif
 
     return true;

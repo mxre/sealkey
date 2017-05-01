@@ -1,18 +1,16 @@
 # Maintainer: Max Resch <resch.max@gmail.com>
 
 pkgname=sealkey
-pkgver=0.1.1
+pkgver=0.1.2
 pkgrel=1
 pkgdesc="Create TPM sealed files using PCR calculated in advance"
 arch=('x86_64')
 url="https://github.com/mxre/sealkey"
 license=('BSD')
-depends=('json-c' 'keyutils' 'openssl' 'tpm-tools' 'trousers' )
+depends=('json-c' 'keyutils' 'openssl' 'efivar' 'tpm-tools' 'trousers')
 makedepends=('git')
 
-git_commit=32ed5c9634e9901581225e49103ded24c634ac65
-
-source=("${pkgname}::git+${url}#commit=${git_commit}")
+source=("${pkgname}::git+${url}#tag=${pkgver}")
 sha256sums=('SKIP')
 
 backup=("etc/sealkey/paths.env"

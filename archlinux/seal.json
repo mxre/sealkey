@@ -19,8 +19,7 @@
     "4": {
       "type": "load-image",
       "paths": [
-        // relative (ESP) path for bootloader (shim)
-        "EFI/systemd/bootx64.efi",
+        "$efiboot:default",
         // This adds the entry from the bootloader
         "$linux"
       ]

@@ -11,7 +11,8 @@
         "array": "cpp",
         "initializer_list": "cpp",
         "utility": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "atomic": "cpp"
     },
     "clang.cflags": [
       "-D_FILE_OFFSET_BITS=64",

@@ -289,7 +289,9 @@ ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* c
     BIO_free(out);
 
     // cleanup
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     EVP_cleanup();
+#endif
 cleanup:
 
     if ((result = Tspi_Context_CloseObject(tspi_context, srk_handle)) != TSS_SUCCESS) {
