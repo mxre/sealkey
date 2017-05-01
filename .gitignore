@@ -9,5 +9,10 @@ sealkey
 *~
 *.bak
 
+# packaging
 archlinux/*.pkg.tar.*
 
+# gtag
+GPATH
+GRTAGS
+GTAGS

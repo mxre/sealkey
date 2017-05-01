@@ -1,4 +1,4 @@
-LIBRARIES = -lkeyutils -lcrypto -ljson-c -lefivar
+LIBRARIES = -lkeyutils -lcrypto -ljson-c -lefivar -ludev
 INCLUDES = -I/usr/include/efivar
 
 # source files
@@ -12,7 +12,7 @@ SOURCES = \
 	src/measure_cmdline.c
 
 # set required C flags
-CFLAGS += -std=c11 #-D_FILE_OFFSET_BITS=64
+CFLAGS += -std=c11 -D_POSIX_C_SOURCE=200809L
 
 # enable TCSD support
 LIBRARIES += -ltspi -ltpm_unseal

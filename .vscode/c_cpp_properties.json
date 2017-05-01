@@ -1,0 +1,16 @@
+{
+  "configurations": [
+    {
+      "name": "Linux",
+      "includePath": [
+        "/usr/include",
+        "/usr/include/efivar"
+      ],
+      "browse": {
+        "path": [
+          "/usr/include"
+        ]
+      }
+    }
+  ]
+}

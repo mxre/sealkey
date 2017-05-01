@@ -267,7 +267,7 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
                         ret = efi_boot_get_current(path, len);
                     } else {
                         char* r;
-                        int entry = strtol(p, &r, 10);
+                        int entry = strtol(p, &r, 16);
                         if (entry == 0 && r == p) {
                             fprintf(stderr, "Error: Cannot parse $efiboot entry: %s\n", p);
                             return false;

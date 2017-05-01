@@ -16,6 +16,7 @@
     },
     "clang.cflags": [
       "-D_FILE_OFFSET_BITS=64",
-      "-DUSE_TSPI=1"
+      "-DUSE_TSPI=1",
+      "-I/usr/include/efivar"
     ]
 }
