@@ -60,9 +60,10 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
      The paths are relative the the ESP. There are also special value, that automatically
      retrieve the paths:
      - `$efiboot:default` and `$efiboot:current` read the first bootloader or current bootloader
-       from the EFI variables. Be careful when using `$efiboot:default` it uses the first oader
-       in the BootOrder list, if this is not an EFI executable e.g., a disk entry, it won't work.
+        from the EFI variables. Be careful when using `$efiboot:default` the first loader
+        in the BootOrder list is used, if it isn't an EFI executable e.g., a disk entry, it won't work.
      - `$efiboot:XXXX` use the entry with the specified number, see output of `efimootmgr`.
+     - `$linux` for the linux kernel provided by the bootloader entry.
    - *entry-cmdline* create a hash the same way systemd-boot creates PCR 8 from kernel parameters.
      If `systemd` is built with the `--enable-tpm` configure option, systemd-boot supports measuring
      the supplied kernel commandline, to a PCR specified at compile time. The default is PCR 8.

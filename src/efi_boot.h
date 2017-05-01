@@ -41,8 +41,8 @@
  * Get the default boot entry
  *
  * @param[out] path to the EFI executable (or NULL, only return value os provided)
- * @para[in] len length of the buffer, pointed to by path.
- * @retruns length of the path
+ * @param[in] len length of the buffer, pointed to by path.
+ * @returns length of the path
  */
 int efi_boot_get_default(char* path, size_t len);
 
@@ -50,8 +50,8 @@ int efi_boot_get_default(char* path, size_t len);
  * Get the current boot entry
  *
  * @param[out] path to the EFI executable (or NULL, only return value os provided)
- * @para[in] len length of the buffer, pointed to by path.
- * @retruns length of the path
+ * @param[in] len length of the buffer, pointed to by path.
+ * @returns length of the path
  */
 int efi_boot_get_current(char* path, size_t len);
 
@@ -60,8 +60,8 @@ int efi_boot_get_current(char* path, size_t len);
  *
  * @param[in] entry nu,ber of the EFI boot entry
  * @param[out] path to the EFI executable (or NULL, only return value os provided)
- * @para[in] len length of the buffer, pointed to by path.
- * @retruns length of the path
+ * @param[in] len length of the buffer, pointed to by path.
+ * @returns length of the path
  */
 int efi_boot_get_numbered(const uint16_t entry, char* path, size_t len);
 
