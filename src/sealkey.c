@@ -338,20 +338,6 @@ static inline bool calculate_boot_options(bootloader_entry_t* entry, bool initrd
     char tmp[LOADER_ENTRY_PATH_LEN];
     tpm_hash_t md;
 
-    if (initrd_hash && entry->number_of_initrds > 0) {
-        for (int i = 0; i < entry->number_of_initrds; i++) {
-            if (entry->initrd[i][0] == '/')
-                snprintf(tmp, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, entry->initrd[i]);
-            else
-                snprintf(tmp, LOADER_ENTRY_PATH_LEN, "%s/%s", entry->esp, entry->initrd[i]);
-            if (!initrd_measure1(tmp, &md) ) {
-                fprintf(stderr, "Error: Could not calculate hash for: %s\n", tmp);
-                return false;
-            }
-            TPM12_Chain_Update(&ctx, &md);
-        }
-    }
-
     int len = 0;
     char option[KERNEL_PARAMS_BUFFER_LEN];
     char* result = option;
@@ -383,7 +369,23 @@ static inline bool calculate_boot_options(bootloader_entry_t* entry, bool initrd
         return false;
     }
 
-    TPM12_Chain_Update(&ctx, &md);
+    TPM12_Chain_Update(&ctx, &md);    
+
+    if (initrd_hash && entry->number_of_initrds > 0) {
+        for (int i = 0; i < entry->number_of_initrds; i++) {
+            if (entry->initrd[i][0] == '/')
+                snprintf(tmp, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, entry->initrd[i]);
+            else
+                snprintf(tmp, LOADER_ENTRY_PATH_LEN, "%s/%s", entry->esp, entry->initrd[i]);
+            if (!initrd_measure1(tmp, &md) ) {
+                fprintf(stderr, "Error: Could not calculate hash for: %s\n", tmp);
+                return false;
+            }
+            TPM12_Chain_Update(&ctx, &md);
+        }
+    }
+
+    
     TPM12_Chain_Finalize(&ctx, chained_digest);
 
     return true;

@@ -1,16 +1,19 @@
 {
-  "configurations": [
-    {
-      "name": "Linux",
-      "includePath": [
-        "/usr/include",
-        "/usr/include/efivar"
-      ],
-      "browse": {
-        "path": [
-          "/usr/include"
-        ]
-      }
-    }
-  ]
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/include",
+                "/usr/include/efivar"
+            ],
+            "browse": {
+                "path": [
+                    "/usr/include",
+                    "${workspaceRoot}"
+                ]
+            },
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 3
 }

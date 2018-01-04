@@ -11,7 +11,7 @@ after a kernel update and before a reboot.
 Supported Systems
 -----------------
 
-I developed and tested sealkey successfully only on a Laptop with a TPM 1.2 running in UEFI mode.
+I developed and tested sealkey successfully on a Laptop with a TPM version 1.2 running in UEFI mode.
 
 Currently the following libraries are neccesary to build sealkey:
  - keyutils
