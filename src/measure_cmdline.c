@@ -41,8 +41,8 @@
 #include <uchar.h>
 #include <assert.h>
 
-#include <openssl/sha.h>
 #include "tpm12_chain.h"
+#include "hash.h"
 #include "systemd-boot.h"
 #include "defines.h"
 
@@ -72,7 +72,7 @@ bool initrd_measure1(const char* initrd, tpm_hash_t* digest) {
     }
     close(fd);
 
-    SHA1(buffer, len, (uint8_t*) digest);
+    hash(HASH_SHA1, buffer, len, (uint8_t*) digest);
 
 #if MEASURE_CMDLINE_DEBUG_OUT
     print_md(digest);
@@ -99,7 +99,7 @@ bool kernel_params_measure1(const char* cmdline, tpm_hash_t* digest) {
         mbrtoc16(&dest[i], &cmdline[i], 1, &state);
     }
 
-    SHA1((uint8_t*) dest, offset * 2, (uint8_t*) digest);
+    hash(HASH_SHA1, (uint8_t*) dest, offset * 2, (uint8_t*) digest);
 
 #if MEASURE_CMDLINE_DEBUG_OUT
     print_md(digest);

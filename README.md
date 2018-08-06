@@ -15,10 +15,12 @@ I developed and tested sealkey successfully on a Laptop with a TPM version 1.2 r
 
 Currently the following libraries are neccesary to build sealkey:
  - keyutils
- - openssl
-   `libcrypto` with AES-CBC, RSA and SHA1 support is needed. Other implementations like libressl might work too.
  - json-c
  - libefivar
+ - gcrypt can be used as an alternative to openssl, build with `-DUSE_GCRYPT=1`
+ - openssl
+   `libcrypto` with AES-CBC, RSA and SHA1 support is needed. Other implementations like libressl might work too.
+   Build `-DUSE_OPENSSL=1`, OpenSSL is required only when using TCSD (see below).
 
 Configuration
 -------------

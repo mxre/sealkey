@@ -12,8 +12,11 @@
                     "${workspaceRoot}"
                 ]
             },
+            "defines": [
+              "USE_OPENSSL=1"
+            ],
             "intelliSenseMode": "clang-x64"
         }
     ],
-    "version": 3
+    "version": 4
 }

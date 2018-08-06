@@ -1,22 +1,9 @@
 {
+    "c-cpp-flylint.language": "c",
+    "c-cpp-flylint.standard": [
+      "c11"
+    ],
     "files.associations": {
-        "hash_map": "cpp",
-        "hash_set": "cpp",
-        "system_error": "cpp",
-        "type_traits": "cpp",
-        "*.ipp": "cpp",
-        "tuple": "cpp",
-        "chrono": "cpp",
-        "ratio": "cpp",
-        "array": "cpp",
-        "initializer_list": "cpp",
-        "utility": "cpp",
-        "thread": "cpp",
-        "atomic": "cpp"
-    },
-    "clang.cflags": [
-      "-D_FILE_OFFSET_BITS=64",
-      "-DUSE_TSPI=1",
-      "-I/usr/include/efivar"
-    ]
-}
+      "defines.h": "c"
+    }
+  }

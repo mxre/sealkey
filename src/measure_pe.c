@@ -40,10 +40,12 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#include <openssl/sha.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 
 #include "pe.h"
 #include "util.h"
+#include "hash.h"
 #include "tpm12_types.h"
 #include "defines.h"
 
@@ -61,18 +63,20 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		fprintf(stderr, "Error: open: %m\n");
 		return ret;
 	}
-	
-	size_t filesize = lseek(fd, 0, SEEK_END);
-	lseek(fd, 0, SEEK_SET);
-	
-	void* pe_image = malloc(filesize);
-	if (pe_image == NULL) {
-		fprintf(stderr, "Error: malloc: %m\n");
-		goto cleanup;
-	}
-	
-	if (read(fd, pe_image, filesize) != (ssize_t) filesize) {
-		fprintf(stderr, "Error: read: %m\n");
+
+#if 0
+    struct statx* st = (struct statx*) malloc(sizeof(struct statx));
+	statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, st);
+    size_t filesize = st->stx_size;
+    free(st);
+#else
+    size_t filesize = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+#endif
+    void* pe_image = mmap(NULL, filesize, PROT_READ, MAP_SHARED, fd, 0);
+	close(fd);
+    if (pe_image == MAP_FAILED) {
+		fprintf(stderr, "Error: mmap: %m\n");
 		goto cleanup;
 	}
 	
@@ -115,8 +119,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	//printf("%x len=%x\n", pe->data_diretories[PE_DIRECTORY_CERTIFICATE_TABLE].offset, pe->data_diretories[PE_DIRECTORY_CERTIFICATE_TABLE].length);
 	
 	// tianocore:/SecurityPkg/Library/DxeTpmMeasureBootLib/DxeTpmMeasureBootLib.c
-	SHA_CTX ctx;
-	SHA1_Init(&ctx);
+	hash_ctx_t ctx = hash_create_ctx(HASH_SHA1);
 
 	void* base;
 	size_t size;
@@ -128,7 +131,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 #if MEASURE_PE_DEBUG_OUT
 	printf("PE %08x - %08zx Header\n", 0, size);
 #endif
-	SHA1_Update(&ctx, base, size);
+	hash_update(ctx, base, size);
 	
 	// 2. Skip over the image checksum (it occupies a single ULONG).
 	if (pe_image_header->OptionalHeader.NumberOfRvaAndSizes <= EFI_IMAGE_DIRECTORY_ENTRY_SECURITY) {
@@ -140,7 +143,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		printf("PE %08zx - %08zx Header\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
-			SHA1_Update(&ctx, base, size);
+			hash_update(ctx, base, size);
 	} else {
 		// 3. Hash everything from the end of the checksum to the start of the Cert Directory.
 		base = (void*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
@@ -149,7 +152,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		printf("PE %08zx - %08zx Header\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
-			SHA1_Update(&ctx, base, size);
+			hash_update(ctx, base, size);
 		
 		// 3a. Skip over the Cert Directory. (It is sizeof(IMAGE_DATA_DIRECTORY) bytes.)
         // 3b. Hash everything from the end of the Cert Directory to the end of image header.
@@ -159,7 +162,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		printf("PE %08zx - %08zx Directory\n", base - pe_image, base - pe_image + size);
 #endif
 		if (size != 0)
-			SHA1_Update(&ctx, base, size);
+			hash_update(ctx, base, size);
 	}
 	
 	/* 4.  Build a temporary table of pointers to all the IMAGE_SECTION_HEADER
@@ -211,7 +214,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		printf("PE %08zx - %08zx Section: %s\n", base - pe_image, base - pe_image + size, section->Name);
 #endif
 		if (size != 0)
-			SHA1_Update(&ctx, base, size);
+			hash_update(ctx, base, size);
 		sum_of_bytes_hashed += size;
 	}
 	
@@ -236,7 +239,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 #if MEASURE_PE_DEBUG_OUT
 			printf("PE %08zx - %08zx Extra data after image end\n", base - pe_image, base - pe_image + size);
 #endif
-			SHA1_Update(&ctx, base, size);
+			hash_update(ctx, base, size);
 		} else if (filesize < cert_size + sum_of_bytes_hashed) {
 			fprintf(stderr, "Error: corruption in section directory\n");
 			goto cleanup;
@@ -244,7 +247,8 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	}
 	
 	// 8. Finalize the hash
-	SHA1_Final((uint8_t*) hash, &ctx);
+	hash_finalize(ctx, (void*) hash, TPM12_HASH_LEN);
+    hash_free_ctx(ctx);
 
 #if MEASURE_PE_DEBUG_OUT
 	print_md(hash);
@@ -253,8 +257,6 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 
 	ret = true;
 cleanup:
-	if (pe_image)
-		free(pe_image);
-	close(fd);
+	munmap(pe_image, filesize);
 	return ret;
 }

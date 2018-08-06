@@ -40,9 +40,8 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#include <openssl/sha.h>
-
 #include "util.h"
+#include "hash.h"
 #include "defines.h"
 
 bool pcr_ctx_from_system(pcr_ctx_t* ctx) {
@@ -64,7 +63,7 @@ bool pcr_ctx_from_system(pcr_ctx_t* ctx) {
     }
 	lseek(fd, 0, SEEK_SET);
 	
-	buffer = malloc(len);
+	buffer = (char*) malloc(len);
 	if (buffer == NULL) {
 		fprintf(stderr, "Error: malloc: %m\n");
 		goto cleanup;
@@ -157,7 +156,7 @@ void pcr_composite_get_info_hex(pcr_composite_ctx_t* ctx, char* buffer) {
     // print_hex(hash_buffer, 1024);
     
     // 4. hash the structure and write the digest in the field of the info struct
-    SHA1(hash_buffer, offset, (uint8_t*) &info.digestAtRelease);
+    hash(HASH_SHA1, hash_buffer, offset, (uint8_t*) &info.digestAtRelease);
     hex_string(buffer, (uint8_t*) &info, sizeof(pcr_info_t));
 }
 

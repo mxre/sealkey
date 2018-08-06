@@ -1,4 +1,4 @@
-LIBRARIES = -lkeyutils -lcrypto -ljson-c -lefivar -ludev
+LIBRARIES = -lkeyutils -ljson-c -lefivar -ludev
 INCLUDES = -I/usr/include/efivar
 
 # source files
@@ -9,15 +9,19 @@ SOURCES = \
 	src/systemd-boot.c \
 	src/efi_boot.c \
 	src/measure_pe.c \
-	src/measure_cmdline.c
+	src/measure_cmdline.c \
+	src/hash.c
 
 # set required C flags
-CFLAGS += -std=c11 -D_POSIX_C_SOURCE=200809L
+CFLAGS += -std=c11 -D_POSIX_C_SOURCE=200809L 
 
 # enable TCSD support
-LIBRARIES += -ltspi -ltpm_unseal
+LIBRARIES += -ltspi -ltpm_unseal -lcrypto
 SOURCES += src/tcsp.c
-CFLAGS += -DUSE_TSPI=1
+CFLAGS += -DUSE_TSPI=1 -DUSE_OPENSSL=1
+
+#LIBRARIES += -lgcrypt
+#CFLAGS += -DUSE_GCRYPT=1
 
 # executable name
 BINARY = sealkey
@@ -28,7 +32,7 @@ BINARY = sealkey
 
 OBJECTS = $(patsubst src/%.c,obj/%.o,$(SOURCES))
 
-all: $(OBJECTS:.o=.d) $(BINARY)
+all: $(BINARY)
 
 # build for release
 dist: CFLAGS += -O3 -g0 -Wall -fPIC -DNDEBUG -D_FORTIFY_SOURCE=2 -fstack-protector-strong --param=ssp-buffer-size=4
@@ -46,10 +50,10 @@ $(BINARY): $(OBJECTS)
 
 obj/%.d: src/%.c
 	@test -d obj || mkdir obj
-	@#echo -e "\x1b[33mDEP\x1b[0m  $<"
+	@echo -e "\x1b[33mDEP\x1b[0m  $<"
 	$(CC) $(CFLAGS) $(INCLUDES) $< -MM -MF $@
 
-obj/%.o: src/%.c
+obj/%.o: src/%.c obj/%.d
 	@test -d obj || mkdir obj
 	@echo -e "\x1b[32mCC\x1b[0m   $@"
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@

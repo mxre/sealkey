@@ -51,7 +51,7 @@
 #include "pcr.h"
 
 static void tspi_error(const char* name, TSS_RESULT result) {
-	fprintf(stderr, "%s failed: 0x%08x - layer=%s, code=%04x (%d), %s\n",
+	fprintf(stderr, "%s failed: 0x%08x - layer=%s, code=%04x (%u), %s\n",
 		 name, result, Trspi_Error_Layer(result),
 		 Trspi_Error_Code(result),
 		 Trspi_Error_Code(result),

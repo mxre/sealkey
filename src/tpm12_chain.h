@@ -36,9 +36,9 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <openssl/sha.h>
 
 #include "util.h"
+#include "hash.h"
 #include "tpm12_types.h"
 
 /**
@@ -46,7 +46,7 @@
  */
 typedef struct {
 	tpm_hash_t digest[2];
-	SHA_CTX ctx;
+	hash_ctx_t ctx;
 } TPM12_Chain_Context;
 
 /**
@@ -56,6 +56,7 @@ typedef struct {
  */
 static inline void TPM12_Chain_Init(TPM12_Chain_Context* ctx) {
 	memset(ctx->digest, 0, 2 * TPM12_HASH_LEN);
+    ctx->ctx = hash_create_ctx(HASH_SHA1);
 }
 
 /**
@@ -65,9 +66,9 @@ static inline void TPM12_Chain_Init(TPM12_Chain_Context* ctx) {
  */
 static inline void TPM12_Chain_Update(TPM12_Chain_Context* ctx, const tpm_hash_t* hash) {
 	memcpy(&ctx->digest[1], hash, TPM12_HASH_LEN);
-    SHA1_Init(&ctx->ctx);
-	SHA1_Update(&ctx->ctx, (uint8_t*) ctx->digest, 2 * TPM12_HASH_LEN);
-	SHA1_Final((uint8_t*) &ctx->digest[0], &ctx->ctx);
+	hash_update(ctx->ctx, (uint8_t*) ctx->digest, 2 * TPM12_HASH_LEN);
+	hash_finalize(ctx->ctx, (uint8_t*) &ctx->digest[0], TPM12_HASH_LEN);
+    hash_ctx_reset(ctx->ctx);
 }
 
 /**

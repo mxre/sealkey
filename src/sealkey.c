@@ -66,7 +66,7 @@ typedef struct {
     /**
      * Path to EFI Partition mount point
      */
-    char esp[LOADER_ENTRY_PATH_LEN];
+    char esp[128];
 
     /**
      * Relative path to the Kernel Image
@@ -231,7 +231,7 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
             return false;
         }
 
-        char filename[LOADER_ENTRY_PATH_LEN];
+        char filename[LOADER_ENTRY_PATH_LEN * 2 + 2];
         if (entry == NULL) {
             if (strcasecmp("$linux", relative_filename) == 0) {
                 fprintf(stderr, "Error: $linux requested, but no bootloader configuration provided\n");
@@ -250,9 +250,9 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
                     return false;
                 }
                 if (entry->image_name[0] == '/') {
-                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, entry->image_name);
+                    snprintf(filename, LOADER_ENTRY_PATH_LEN * 2, "%s%s", entry->esp, entry->image_name);
                 } else {
-                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s/%s", entry->esp, entry->image_name);
+                    snprintf(filename, LOADER_ENTRY_PATH_LEN * 2 + 1, "%s/%s", entry->esp, entry->image_name);
                 }
             } else if (strncasecmp("$efiboot:", relative_filename, 9) == 0) {
                 char* p = strchr(relative_filename, ':') + 1;
@@ -287,16 +287,16 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
                     while((p = strchr(p, '\\')) != NULL)
                         *p = '/';
                     
-                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, path);
+                    snprintf(filename, LOADER_ENTRY_PATH_LEN * 2, "%s%s", entry->esp, path);
                 } else {
                     fprintf(stderr, "Error: Illegal $efiboot entry\n");
                     return false;
                 }
             } else {
                 if (relative_filename[0] == '/') {
-                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, relative_filename);
+                    snprintf(filename, LOADER_ENTRY_PATH_LEN * 2, "%s%s", entry->esp, relative_filename);
                 } else {
-                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s/%s", entry->esp, relative_filename);
+                    snprintf(filename, LOADER_ENTRY_PATH_LEN * 2, "%s/%s", entry->esp, relative_filename);
                 }
             }
         }
@@ -335,7 +335,7 @@ static inline bool calculate_boot_options(bootloader_entry_t* entry, bool initrd
     TPM12_Chain_Context ctx;
     TPM12_Chain_Init(&ctx);
 
-    char tmp[LOADER_ENTRY_PATH_LEN];
+    char tmp[LOADER_ENTRY_PATH_LEN * 2 + 2];
     tpm_hash_t md;
 
     int len = 0;
@@ -374,9 +374,9 @@ static inline bool calculate_boot_options(bootloader_entry_t* entry, bool initrd
     if (initrd_hash && entry->number_of_initrds > 0) {
         for (int i = 0; i < entry->number_of_initrds; i++) {
             if (entry->initrd[i][0] == '/')
-                snprintf(tmp, LOADER_ENTRY_PATH_LEN, "%s%s", entry->esp, entry->initrd[i]);
+                snprintf(tmp, LOADER_ENTRY_PATH_LEN * 2, "%s%s", entry->esp, entry->initrd[i]);
             else
-                snprintf(tmp, LOADER_ENTRY_PATH_LEN, "%s/%s", entry->esp, entry->initrd[i]);
+                snprintf(tmp, LOADER_ENTRY_PATH_LEN * 2 + 1, "%s/%s", entry->esp, entry->initrd[i]);
             if (!initrd_measure1(tmp, &md) ) {
                 fprintf(stderr, "Error: Could not calculate hash for: %s\n", tmp);
                 return false;
@@ -1191,6 +1191,7 @@ int main(int argc, char* argv[]) {
     int ret = 1;
 
     if (argc > 2) {
+            hash_lib_init();
             json_object_t configuration = NULL;
             int configuration_option = 2;
             if (strcmp(argv[1], "pcr") == 0) {
@@ -1210,7 +1211,7 @@ int main(int argc, char* argv[]) {
                 configfile_free(configuration);
                 return 1;
             }
-            
+
             char* outfile = NULL;
             char* infile = NULL;
             if (strcmp(argv[1], "new") == 0) {
