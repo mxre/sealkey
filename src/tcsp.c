@@ -82,8 +82,8 @@ ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* c
     assert(output);
 
     ssize_t ret = -1;
-    const uint32_t aes_key_len = EVP_CIPHER_key_length(EVP_aes_256_cbc());
-    const uint32_t aes_block_len = EVP_CIPHER_block_size(EVP_aes_256_cbc());
+    const uint32_t aes_key_len = (uint32_t) EVP_CIPHER_key_length(EVP_aes_256_cbc());
+    const uint32_t aes_block_len = (uint32_t) EVP_CIPHER_block_size(EVP_aes_256_cbc());
     TSS_FLAG rsa_key_flags = TSS_KEY_TYPE_STORAGE | TSS_KEY_SIZE_2048 | TSS_KEY_VOLATILE | TSS_KEY_AUTHORIZATION | TSS_KEY_NOT_MIGRATABLE;
 
     // outside of goto scope

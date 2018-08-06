@@ -335,7 +335,6 @@ static inline bool calculate_boot_options(bootloader_entry_t* entry, bool initrd
     TPM12_Chain_Context ctx;
     TPM12_Chain_Init(&ctx);
 
-    char tmp[LOADER_ENTRY_PATH_LEN * 2 + 2];
     tpm_hash_t md;
 
     int len = 0;
@@ -372,6 +371,7 @@ static inline bool calculate_boot_options(bootloader_entry_t* entry, bool initrd
     TPM12_Chain_Update(&ctx, &md);    
 
     if (initrd_hash && entry->number_of_initrds > 0) {
+        char tmp[LOADER_ENTRY_PATH_LEN * 2 + 2];
         for (int i = 0; i < entry->number_of_initrds; i++) {
             if (entry->initrd[i][0] == '/')
                 snprintf(tmp, LOADER_ENTRY_PATH_LEN * 2, "%s%s", entry->esp, entry->initrd[i]);

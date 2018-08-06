@@ -3,7 +3,23 @@
     "c-cpp-flylint.standard": [
       "c11"
     ],
+    "c-cpp-flylint.clang.warnings": [
+      "all",
+      "extra",
+      "everything",
+      "no-vla",
+      "no-reserved-id-macro"
+    ],
     "files.associations": {
-      "defines.h": "c"
+      "tpm12_chain.h": "c",
+      "*.inc": "c",
+      "*.ipp": "c",
+      "array": "c",
+      "hash_map": "c",
+      "hash_set": "c",
+      "bitset": "c",
+      "string_view": "c",
+      "initializer_list": "c",
+      "utility": "c"
     }
   }

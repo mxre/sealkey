@@ -73,7 +73,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
     size_t filesize = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
 #endif
-    void* pe_image = mmap(NULL, filesize, PROT_READ, MAP_SHARED, fd, 0);
+    uint8_t* pe_image = mmap(NULL, filesize, PROT_READ, MAP_SHARED, fd, 0);
 	close(fd);
     if (pe_image == MAP_FAILED) {
 		fprintf(stderr, "Error: mmap: %m\n");
@@ -121,13 +121,13 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	// tianocore:/SecurityPkg/Library/DxeTpmMeasureBootLib/DxeTpmMeasureBootLib.c
 	hash_ctx_t ctx = hash_create_ctx(HASH_SHA1);
 
-	void* base;
+	uint8_t* base;
 	size_t size;
 	size_t sum_of_bytes_hashed = 0;
 
 	base = pe_image;
 	// 1. Hash the image header from its base to beginning of the image checksum.
-	size = ((void*) &pe_image_header->OptionalHeader.CheckSum - pe_image);
+	size = ((uint8_t*) &pe_image_header->OptionalHeader.CheckSum - pe_image);
 #if MEASURE_PE_DEBUG_OUT
 	printf("PE %08x - %08zx Header\n", 0, size);
 #endif
@@ -137,7 +137,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 	if (pe_image_header->OptionalHeader.NumberOfRvaAndSizes <= EFI_IMAGE_DIRECTORY_ENTRY_SECURITY) {
 		// 3. Since there is no Cert Directory in optional header, hash everything
     	//    from the end of the checksum to the end of image header.
-		base = (void*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
+		base = (uint8_t*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
 		size = pe_image_header->OptionalHeader.SizeOfHeaders - (size_t) (base - pe_image);
 #if MEASURE_PE_DEBUG_OUT
 		printf("PE %08zx - %08zx Header\n", base - pe_image, base - pe_image + size);
@@ -146,8 +146,8 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 			hash_update(ctx, base, size);
 	} else {
 		// 3. Hash everything from the end of the checksum to the start of the Cert Directory.
-		base = (void*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
-		size = (size_t) ((void*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY] - base);
+		base = (uint8_t*) &pe_image_header->OptionalHeader.CheckSum + sizeof(uint32_t);
+		size = (size_t) ((uint8_t*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY] - base);
 #if MEASURE_PE_DEBUG_OUT
 		printf("PE %08zx - %08zx Header\n", base - pe_image, base - pe_image + size);
 #endif
@@ -156,7 +156,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		
 		// 3a. Skip over the Cert Directory. (It is sizeof(IMAGE_DATA_DIRECTORY) bytes.)
         // 3b. Hash everything from the end of the Cert Directory to the end of image header.
-		base = (void*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY + 1];
+		base = (uint8_t*) &pe_image_header->OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_SECURITY + 1];
 		size = pe_image_header->OptionalHeader.SizeOfHeaders - (size_t) (base - pe_image);
 #if MEASURE_PE_DEBUG_OUT
 		printf("PE %08zx - %08zx Directory\n", base - pe_image, base - pe_image + size);
@@ -208,7 +208,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		if (section->SizeOfRawData == 0)
 			continue;
 		
-		base = (void*) pe_image + section->PointerToRawData;
+		base = (uint8_t*) pe_image + section->PointerToRawData;
 		size = (size_t) section->SizeOfRawData;
 #if MEASURE_PE_DEBUG_OUT
 		printf("PE %08zx - %08zx Section: %s\n", base - pe_image, base - pe_image + size, section->Name);
