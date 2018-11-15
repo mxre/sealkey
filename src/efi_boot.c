@@ -103,8 +103,8 @@ static void efi_boot_partition(efi_guid_t* guid) {
     fprintf(stderr, "EFI partition %s mounted at %s\n", path, fs);
 #endif
     if (strcmp(fs, EFI_SYSTEM_PARTITION_MOUNT_POINT) != 0) {
-        fprintf(stderr, "EFI boot entry is not on the mounted ESP\n");
-        goto cleanup_dev;
+        // fprintf(stderr, "EFI boot entry is not on the mounted ESP\n");
+        // goto cleanup_dev;
     }
     free(fs);
 

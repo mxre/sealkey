@@ -64,7 +64,7 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 		return ret;
 	}
 
-#if 0
+#if 1
     struct statx* st = (struct statx*) malloc(sizeof(struct statx));
 	statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, st);
     size_t filesize = st->stx_size;

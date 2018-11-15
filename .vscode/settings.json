@@ -20,6 +20,8 @@
       "bitset": "c",
       "string_view": "c",
       "initializer_list": "c",
-      "utility": "c"
+      "utility": "c",
+      "hash.h": "c",
+      "tcsp.h": "c"
     }
   }

@@ -13,10 +13,10 @@ SOURCES = \
 	src/hash.c
 
 # set required C flags
-CFLAGS += -std=c11 -D_POSIX_C_SOURCE=200809L 
+CFLAGS += -std=c11 -D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE=1
 
 # enable TCSD support
-LIBRARIES += -ltspi -ltpm_unseal -lcrypto
+LIBRARIES += -ltspi -lcrypto
 SOURCES += src/tcsp.c
 CFLAGS += -DUSE_TSPI=1 -DUSE_OPENSSL=1
 
@@ -36,7 +36,7 @@ all: $(BINARY)
 
 # build for release
 dist: CFLAGS += -O3 -g0 -Wall -fPIC -DNDEBUG -D_FORTIFY_SOURCE=2 -fstack-protector-strong --param=ssp-buffer-size=4
-dist: LDFLAGS += -pie -Wl,-S,-O1,--sort-common,-z,relro,-z,now
+dist: LDFLAGS += -pie -Wl,-s,-O1,--sort-common,-z,relro,-z,now
 dist: all
 
 # build for debug

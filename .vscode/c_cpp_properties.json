@@ -13,7 +13,9 @@
                 ]
             },
             "defines": [
-              "USE_OPENSSL=1"
+              "USE_OPENSSL=1",
+              "USE_TSPI=1",
+              "_GNU_SOURCE"
             ],
             "intelliSenseMode": "clang-x64"
         }

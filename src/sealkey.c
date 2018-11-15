@@ -41,6 +41,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <keyutils.h>
+#include <sys/stat.h>
 
 #include "configfile.h"
 #include "pcr.h"
@@ -237,11 +238,8 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
                 fprintf(stderr, "Error: $linux requested, but no bootloader configuration provided\n");
                 return false;
             } else {
-                if (relative_filename[0] == '/') {
-                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s%s", EFI_SYSTEM_PARTITION_MOUNT_POINT, relative_filename);
-                } else {
-                    snprintf(filename, LOADER_ENTRY_PATH_LEN, "%s/%s", EFI_SYSTEM_PARTITION_MOUNT_POINT, relative_filename);
-                }
+                fprintf(stderr, "Error: entry == NULL\n");
+                return false;
             }
         } else {
             if (strcasecmp("$linux", relative_filename) == 0) {
@@ -495,7 +493,7 @@ static bool calculate_pcrs_object(json_object_t sub_conf, int pcr, pcr_ctx_t* ct
 /**
  * Mark PCR in selected PCR bit mask
  */
-static inline void add_pcr_to_composite(uint16_t pcr, uint16_t* selected) {
+static inline void add_pcr_to_composite(uint32_t pcr, uint32_t* selected) {
     *selected |= (1 << pcr);
 }
 
@@ -509,7 +507,7 @@ static inline void add_pcr_to_composite(uint16_t pcr, uint16_t* selected) {
  * @param[out] selected_pcrs
  *       Bitmap that marks the selected PCRs according to configuration
  */
-static bool calculate_pcrs(json_object_t configuration, pcr_ctx_t* ctx, uint16_t* selected_pcrs) {
+static bool calculate_pcrs(json_object_t configuration, pcr_ctx_t* ctx, uint32_t* selected_pcrs) {
     bootloader_entry_t loader_conf;
     memset(&loader_conf, 0, sizeof loader_conf);
     bootloader_entry_t* loader_conf_p = &loader_conf;
@@ -536,9 +534,9 @@ static bool calculate_pcrs(json_object_t configuration, pcr_ctx_t* ctx, uint16_t
         for (struct json_object_iterator iter = json_object_iter_begin(pcr_lock); !json_object_iter_equal(&iter, &end); json_object_iter_next(&iter)) {
             const char* name = json_object_iter_peek_name(&iter);
             struct json_object* pcr_val = json_object_iter_peek_value(&iter);
-            int pcr = strtol(name, NULL, 10);
+            long pcr = strtol(name, NULL, 10);
             if (pcr < 0 || pcr >= PCR_LENGTH) {
-                fprintf(stderr, "Error: Invalid PCR[%02d] for lock selected\n", pcr);
+                fprintf(stderr, "Error: Invalid PCR[%02ld] for lock selected\n", pcr);
                 goto cleanup;
             }
 
@@ -546,11 +544,11 @@ static bool calculate_pcrs(json_object_t configuration, pcr_ctx_t* ctx, uint16_t
             switch (type) {
                 case json_type_string:
                     if (strcmp("pcr", json_object_get_string(pcr_val)) == 0) {
-                        add_pcr_to_composite(pcr, selected_pcrs);
+                        add_pcr_to_composite((uint32_t) pcr, selected_pcrs);
                     } else {
                         const char* value_hex = json_object_get_string(pcr_val);
                         if (!set_pcr_from_string(value_hex, &ctx->pcrs[pcr])) {
-                            fprintf(stderr, "Error: Invalid configuration value for PCR[%02d]: %s\n", pcr, json_object_get_string(pcr_val));
+                            fprintf(stderr, "Error: Invalid configuration value for PCR[%02ld]: %s\n", pcr, json_object_get_string(pcr_val));
                             goto cleanup;
                         } else {
                             add_pcr_to_composite(pcr, selected_pcrs);
@@ -565,7 +563,7 @@ static bool calculate_pcrs(json_object_t configuration, pcr_ctx_t* ctx, uint16_t
                     }
                     break;
                 default:
-                    fprintf(stderr, "Error: Invalid JSON type for PCR[%02d]: %s\n", pcr, json_type_to_name(type));
+                    fprintf(stderr, "Error: Invalid JSON type for PCR[%02ld]: %s\n", pcr, json_type_to_name(type));
                     goto cleanup;
                     break;
             }
@@ -588,7 +586,7 @@ cleanup:
 static bool generate_pcr_info_struct(json_object_t configuration, char* pcrinfo) {
 	bool ret = false;
     pcr_ctx_t pcr_ctx;
-    uint16_t selected_pcrs = 0;
+    uint32_t selected_pcrs = 0;
 
     if (!pcr_ctx_from_system(&pcr_ctx)) {
         fprintf(stderr, "Could not read PCRs\n");
@@ -727,7 +725,7 @@ static inline void print_key(FILE* out, key_serial_t id) {
 static inline bool new_command(json_object_t configuration, char* outfile) {
     assert(configuration);
 
-    key_serial_t key_id = -1;
+    key_serial_t key_id;
 
     key_id = seal_new_key(configuration);
     
@@ -735,8 +733,7 @@ static inline bool new_command(json_object_t configuration, char* outfile) {
         printf("%d\n", key_id);
 
         if (outfile != NULL) {
-            FILE* out = NULL;
-            out = fopen(outfile, "w");
+            FILE* out = fopen(outfile, "w");
             if (out == NULL) {
                 fprintf(stderr, "Error open: %m\n");
                 return false;
@@ -817,8 +814,7 @@ static inline key_serial_t update_command(json_object_t configuration, char* out
     }
 
     if (outfile != NULL) {
-        FILE* out = NULL;
-        out = fopen(outfile, "w");
+        FILE* out = fopen(outfile, "w");
         if (out == NULL) {
             fprintf(stderr, "Error open: %m\n");
             return false;
@@ -860,8 +856,7 @@ static inline bool pcrinfo_command(json_object_t configuration, char* outfile) {
 	}
 
     if (outfile != NULL) {
-        FILE* out = NULL;
-        out = fopen(outfile, "w");
+        FILE* out = fopen(outfile, "w");
         if (out == NULL) {
             fprintf(stderr, "Error open: %m\n");
             return false;
@@ -882,7 +877,7 @@ static inline bool pcr_current_command(json_object_t configuration) {
     assert(configuration);
 
     pcr_ctx_t pcr_ctx;
-    uint16_t selected_pcrs = 0;
+    uint32_t selected_pcrs = 0;
 
     if (!pcr_ctx_from_system(&pcr_ctx)) {
         fprintf(stderr, "Could not read PCRs\n");
@@ -902,13 +897,13 @@ static inline bool pcr_current_command(json_object_t configuration) {
         struct json_object_iterator end = json_object_iter_end(pcr_lock);
         for (struct json_object_iterator iter = json_object_iter_begin(pcr_lock); !json_object_iter_equal(&iter, &end); json_object_iter_next(&iter)) {
             const char* name = json_object_iter_peek_name(&iter);
-            int pcr = strtol(name, NULL, 10);
+            long pcr = strtol(name, NULL, 10);
             if (pcr < 0 || pcr >= PCR_LENGTH) {
-                fprintf(stderr, "Error: Invalid PCR[%02d] for lock selected\n", pcr);
+                fprintf(stderr, "Error: Invalid PCR[%02ld] for lock selected\n", pcr);
                 return false;
             }
 
-            add_pcr_to_composite(pcr, &selected_pcrs);
+            add_pcr_to_composite((uint32_t) pcr, &selected_pcrs);
         }
     }
 
@@ -930,7 +925,7 @@ static inline bool pcr_updated_command(json_object_t configuration) {
     assert(configuration);
 
     pcr_ctx_t pcr_ctx;
-    uint16_t selected_pcrs = 0;
+    uint32_t selected_pcrs = 0;
 
     if (!pcr_ctx_from_system(&pcr_ctx)) {
         fprintf(stderr, "Could not read PCRs\n");
@@ -969,7 +964,7 @@ static inline bool tpm_seal_command(json_object_t configuration, const char* inf
     assert(configuration);
 
     pcr_ctx_t pcr_ctx;
-    uint16_t selected_pcrs = 0;
+    uint32_t selected_pcrs = 0;
 
     if (!pcr_ctx_from_system(&pcr_ctx)) {
         fprintf(stderr, "Could not read PCRs\n");
@@ -986,18 +981,16 @@ static inline bool tpm_seal_command(json_object_t configuration, const char* inf
     uint8_t* buffer = NULL;
     ssize_t out_length = 0;
     uint8_t* out_buffer = NULL;
+    struct statx stat = { 0 };
+
     if (infile != NULL) {
         if ((fd = open(infile, O_RDONLY)) < 0) {
             fprintf(stderr, "Error: open: %m\n");
             goto cleanup;
         }
 
-        if ((length = lseek(fd, 0, SEEK_END)) < 0) {
-            fprintf(stderr, "Error: seek: %m\n");
-            goto cleanup;
-        }
-
-        lseek(fd, 0, SEEK_SET);
+        statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stat);
+        length = stat.stx_size;
 
         if ((buffer = malloc(length)) == NULL) {
             fprintf(stderr, "Error: malloc: %m\n");
@@ -1042,16 +1035,14 @@ static inline bool tpm_seal_command(json_object_t configuration, const char* inf
 
     if (outfile != NULL) {
         FILE* output;
-        if ((output = fopen(outfile, "w")) == NULL) {
+        if ((output = fopen(outfile, "wb")) == NULL) {
             fprintf(stderr, "Error: open: %m\n");
             goto cleanup;
         }
         fwrite(out_buffer, 1, out_length, output);
-        fputs("\n", output);
         fclose(output);
     } else {
         fwrite(out_buffer, 1, out_length, stdout);
-        fputs("\n", stdout);
     }
 
     ret = true;
@@ -1069,9 +1060,73 @@ cleanup:
 
 #if USE_TSPI
 /**
- * Unseal a file in the TPM tools format and reseal it using newly calculated PCRs
+ * Unseal a file in the TPM tools format print/write the cleartext contents
  *
- * This function uses library calls for unsealing, as these are provided by tpm_tools.
+ * @param configuration
+ * @param infile
+ * @param outfile
+ *        can be `NULL` in which case `stdout` will be used
+ */
+static inline bool tpm_unseal_command(json_object_t configuration, const char* infile, const char* outfile) {
+    assert(infile);
+    assert(configuration);
+
+    bool ret = false;
+    size_t in_length = 0;
+    uint8_t* in_buffer = NULL;
+    ssize_t out_length = 0;
+    uint8_t* out_buffer = NULL;
+    struct statx stat = { 0 };
+    int fd;
+    
+    fd = open(infile, O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "Could not open %s: %m\n", infile);
+        goto cleanup;
+    }
+    statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stat);
+    in_length = stat.stx_size;
+
+    in_buffer = (uint8_t*) malloc(in_length);
+    if (read(fd, in_buffer, in_length) < 0) {
+        fprintf(stderr, "Could not read %s: %m\n", infile);
+        close(fd);
+        goto cleanup;
+    }
+    close(fd);
+
+    if ((out_length = tcsp_unseal_data(in_buffer, in_length, &out_buffer)) < 0) {
+        goto cleanup;
+    }
+
+    if (outfile != NULL) {
+        FILE* output;
+        if ((output = fopen(outfile, "w")) == NULL) {
+            fprintf(stderr, "Error: open: %m\n");
+            goto cleanup;
+        }
+        fwrite(out_buffer, 1, out_length, output);
+        fclose(output);
+    } else {
+        fwrite(out_buffer, 1, out_length, stdout);
+        fputs("\n", stdout);
+    }
+
+    ret = true;
+cleanup:
+    if (in_buffer)
+        free(in_buffer);
+    if (out_buffer)
+        free(out_buffer);
+    
+    return ret;
+}
+#endif // USE_TSPI
+
+
+#if USE_TSPI
+/**
+ * Unseal a file in the TPM tools format and reseal it using newly calculated PCRs
  *
  * @param configuration
  * @param infile
@@ -1084,16 +1139,36 @@ static inline bool tpm_update_command(json_object_t configuration, const char* i
 
     bool ret = false;
     ssize_t length = 0;
+    size_t in_length = 0;
     uint8_t* buffer = NULL;
+    uint8_t* in_buffer = NULL;
     ssize_t out_length = 0;
     uint8_t* out_buffer = NULL;
+    struct statx stat = { 0 };
+    int fd;
+    
+    fd = open(infile, O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "Could not open %s: %m\n", infile);
+        goto cleanup;
+    }
+    statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stat);
+    in_length = stat.stx_size;
 
-    if ((length = tcsp_unseal_data(infile, &buffer)) < 0) {
+    in_buffer = (uint8_t*) malloc(in_length);
+    if (read(fd, in_buffer, in_length) < 0) {
+        fprintf(stderr, "Could not read %s: %m\n", infile);
+        close(fd);
+        goto cleanup;
+    }
+    close(fd);
+
+    if ((length = tcsp_unseal_data(in_buffer, in_length, &buffer)) < 0) {
         goto cleanup;
     }
 
     pcr_ctx_t pcr_ctx;
-    uint16_t selected_pcrs = 0;
+    uint32_t selected_pcrs = 0;
 
     if (!pcr_ctx_from_system(&pcr_ctx)) {
         fprintf(stderr, "Could not read PCRs\n");
@@ -1124,6 +1199,8 @@ static inline bool tpm_update_command(json_object_t configuration, const char* i
 
     ret = true;
 cleanup:
+    if (in_buffer)
+        free(in_buffer);
     if (buffer)
         free(buffer);
     if (out_buffer)
@@ -1146,6 +1223,9 @@ static inline void print_usage() {
 #if USE_TSPI
         PROGRAM_NAME " tpm_seal <configfile> [<inputfile>] [<outfile>]\n"
         "   Seal a new file with PCR configuration\n"
+        "\n"
+        PROGRAM_NAME " tpm_unseal <configfile> <inputfile> [<outfile>]\n"
+        "   Unseal an exisiting encrypted file and return the cleartext contents\n"
         "\n"
         PROGRAM_NAME " tpm_update <configfile> <inputfile> [<outfile>]\n"
         "   Update the seal on an exisiting encrypted file with PCR configuration\n"
@@ -1264,6 +1344,20 @@ int main(int argc, char* argv[]) {
                 }
 
                 if (tpm_seal_command(configuration, infile, outfile))
+                    ret = 0;
+            } else if (strcmp(argv[1], "tpm_unseal") == 0) {
+                if (argc == 5) {
+                    infile = argv[3];
+                    if (strlen(argv[4]) > 0)
+                        outfile = argv[4];
+                } else if (argc == 4) {
+                    infile = argv[3];
+                } else {
+                    printf("Illegal number of arguments: %d\n", argc);
+                    goto cleanup;
+                }
+
+                if (tpm_unseal_command(configuration, infile, outfile))
                     ret = 0;
             } else if (strcmp(argv[1], "tpm_update") == 0) {
                 if (argc == 5) {

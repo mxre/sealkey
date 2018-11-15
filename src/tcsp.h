@@ -46,18 +46,20 @@
  * @param[in] len
  * @param[in] ctx
  * @param[in] selection
+ *   selected PCRs (bit map)
  * @param[out] output
  * @returns lenght of output
  */
-ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* ctx, uint16_t selection, uint8_t** output);
+ssize_t tcsp_seal_data(const uint8_t* data, const size_t len, const pcr_ctx_t* ctx, uint32_t selection, uint8_t** output);
 
 /**
  * Unseal sealed data
  *
- * @param[in] filename
+ * @param[in] input data
+ * @param[in] len length of input buffer
  * @param[out] data
  * @returns length of data
  */
-ssize_t tcsp_unseal_data(const char* filename, uint8_t** data);
+ssize_t tcsp_unseal_data(const uint8_t* input, const size_t len, uint8_t** data);
 
 #endif // _TCSP_H
