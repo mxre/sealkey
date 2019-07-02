@@ -101,9 +101,21 @@ static bool bootloader_load_config(json_object_t sub_conf, bootloader_entry_t* e
 
     bool ret = false;
 
+    json_object_t esp;
+    if(!json_object_object_get_ex(sub_conf, "esp", &esp)) {
+        strcpy(entry->esp, EFI_SYSTEM_PARTITION_MOUNT_POINT);
+        fprintf(stderr, "Error: ESP not specified, assume '%s'\n", EFI_SYSTEM_PARTITION_MOUNT_POINT);
+    } else {
+        if (json_object_get_type(esp) != json_type_string) {
+            fprintf(stderr, "Error: type field for esp is not a string\n");
+            return false;
+        }
+        strncpy(entry->esp, json_object_get_string(esp), sizeof(entry->esp)-1);
+    }
+
     json_object_t bootloader_type;
     if(!json_object_object_get_ex(sub_conf, "type", &bootloader_type)) {
-        fprintf(stderr, "Error: type field missing for bootloader\n");
+        // fprintf(stderr, "Error: type field missing for bootloader\n");
         return false;
     }
     if (json_object_get_type(bootloader_type) != json_type_string) {
@@ -117,20 +129,9 @@ static bool bootloader_load_config(json_object_t sub_conf, bootloader_entry_t* e
         return false;
     }
 
-    json_object_t esp;
-    if(!json_object_object_get_ex(sub_conf, "esp", &esp)) {
-        strcpy(entry->esp, EFI_SYSTEM_PARTITION_MOUNT_POINT);
-    } else {
-        if (json_object_get_type(esp) != json_type_string) {
-            fprintf(stderr, "Error: type field for esp is not a string\n");
-            return false;
-        }
-        strncpy(entry->esp, json_object_get_string(esp), sizeof(entry->esp));
-    }
-
     json_object_t boot_entry;
     if(!json_object_object_get_ex(sub_conf, "entry", &boot_entry)) {
-        fprintf(stderr, "Error: entry field missing for bootloader\n");
+        // fprintf(stderr, "Error: entry field missing for bootloader\n");
         return false;
     }
 

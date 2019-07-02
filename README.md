@@ -51,8 +51,10 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
    Keys are created in kernel, the kernel module `trusted.ko` must be loaded. Keys can be
    inspected using the `keyctl` utility.
  - The *bootloader* section contains information on the configuration of the bootloader.
-   Currently only *systemd-boot* is supported. The key *entry* is mandatory, it is used
-   to read the used kernel image, initrd and kernel commandline.
+   Currently only *systemd-boot* is supported. The key *entry* is used
+   to read the used kernel image, initrd and kernel commandline. The keys are optional. If
+   not used, the special values `$linux` and `entry-cmdline` can't be used. `esp` is required,
+   or a default (`/boot`) is used.
  - The *pcrlock* section lists PCRs for sealing the key, the following types are recognized:
    - *pcr* read the PCR from the Firmware and use it for sealing, this type supports the optional
      key *value* that allows to set a SHA-1 hash directly in the configuration file.
