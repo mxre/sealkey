@@ -56,6 +56,7 @@
 
 #if USE_TSPI
 #include "tcsp.h"
+#include "tcsp_nv.h"
 #endif
 
 const tpm_hash_t EV_SEPERATOR = { _EV_SEPERATOR };
@@ -1035,13 +1036,28 @@ static inline bool tpm_seal_command(json_object_t configuration, const char* inf
     }
 
     if (outfile != NULL) {
-        FILE* output;
-        if ((output = fopen(outfile, "wb")) == NULL) {
-            fprintf(stderr, "Error: open: %m\n");
-            goto cleanup;
+        if (strncmp(outfile, "nv:", 3) == 0) {
+            errno = 0;
+            char* ep;
+            long value = strtol(outfile + 5, &ep, 16);
+            if ((errno == ERANGE && (value == LONG_MAX || value == LONG_MIN)) || (errno != 0 && value == 0)) {
+                    fprintf(stderr, "Illegal NV address\n");
+                    return 1;
+            } else if (value < 0 && value > UINT32_MAX) {
+                    fprintf(stderr, "Illegal NV address\n");
+                    return 1;
+            } else {
+                    tcsp_nv_write((uint32_t) value, out_buffer, out_length);
+            }
+        } else {
+            FILE* output;
+            if ((output = fopen(outfile, "wb")) == NULL) {
+                fprintf(stderr, "Error: open: %m\n");
+                goto cleanup;
+            }
+            fwrite(out_buffer, 1, out_length, output);
+            fclose(output);
         }
-        fwrite(out_buffer, 1, out_length, output);
-        fclose(output);
     } else {
         fwrite(out_buffer, 1, out_length, stdout);
     }

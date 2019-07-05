@@ -17,7 +17,7 @@ CFLAGS += -std=c11 -D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE=1
 
 # enable TCSD support
 LIBRARIES += -ltspi -lcrypto
-SOURCES += src/tcsp.c
+SOURCES += src/tcsp.c src/tcsp_nv.c
 CFLAGS += -DUSE_TSPI=1 -DUSE_OPENSSL=1
 
 #LIBRARIES += -lgcrypt
