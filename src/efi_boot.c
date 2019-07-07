@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <uchar.h>
 #include <assert.h>
@@ -11,6 +12,34 @@
 #include <libudev.h>
 
 #include "defines.h"
+
+static const efi_guid_t SYSTEMD_GUID = EFI_GUID(0x4a67b082, 0x0a4c, 0x41cf, 0xb6c7, 0x44, 0x0b, 0x29, 0xbb, 0x8c, 0x4f);
+
+static bool _ucs2_to_utf8(const char16_t* ucs2, size_t length, char* buffer, size_t* buffer_length) {
+    bool ret = false;
+    mbstate_t st = { 0 };
+
+    size_t guessed_length = (size_t) length / 2;
+    if (*buffer_length < guessed_length) {
+        *buffer_length = guessed_length;
+    } else if (buffer != NULL) {
+        size_t u8_len = 0;
+
+        for (size_t j = 0; j < guessed_length; j++) {
+            size_t c_len = c16rtomb(buffer + u8_len, ucs2[j], &st);
+            if (c_len == 0)
+                continue;
+            if (length > 0)
+                u8_len += c_len;
+            else
+                break;
+        }
+        *buffer_length = u8_len;
+        ret = true;
+    }
+
+    return ret;
+}
 
 /**
  * Get the mount point for a specific device.
@@ -42,11 +71,12 @@ static char* efi_boot_find_mount_path(const char* device) {
 /**
  * Make a sanity check on the EFI partition GUID
  */
-static void efi_boot_partition(efi_guid_t* guid) {
+static bool efi_boot_partition(efi_guid_t* guid, char* esp) {
     struct udev* udev = udev_new();
+    bool ret = false;
     if (!udev) {
         fprintf(stderr, "Cannot connect to udev\n");
-        return;
+        return ret;
     }
     struct udev_enumerate* e = udev_enumerate_new(udev);
     if (!udev) {
@@ -102,11 +132,10 @@ static void efi_boot_partition(efi_guid_t* guid) {
 #if EFI_DEBUG_OUT
     fprintf(stderr, "EFI partition %s mounted at %s\n", path, fs);
 #endif
-    if (strcmp(fs, EFI_SYSTEM_PARTITION_MOUNT_POINT) != 0) {
-        // fprintf(stderr, "EFI boot entry is not on the mounted ESP\n");
-        // goto cleanup_dev;
-    }
+    if (esp)
+        strcpy(esp, fs);
     free(fs);
+    ret = true;
 
 cleanup_dev:
     udev_device_unref(dev);
@@ -115,6 +144,34 @@ cleanup_enum:
     free(attr);
 cleanup_udev:
     udev_unref(udev);
+
+    return ret;
+}
+
+bool efi_boot_get_esp(char* esp) {
+    uint8_t* buffer = NULL;
+    size_t size;
+    uint32_t attributes;
+
+    if (efi_get_variable(SYSTEMD_GUID, "LoaderDevicePartUUID", &buffer, &size, &attributes) != 0) {
+        fprintf(stderr, "Cannot find LoaderDevicePartUUID EFI variable.\n");
+        return false;
+    }
+
+    size_t guid_len = 40;
+    char part_guid_str[guid_len];
+    if (!_ucs2_to_utf8((const char16_t*) buffer, size, part_guid_str, &guid_len)) {
+        fprintf(stderr, "Cannot read LoaderDevicePartUUID EFI variable.\n");
+        return false;
+    }
+    efi_guid_t part_guid;
+    if (efi_str_to_guid(part_guid_str, &part_guid) != 0) {
+        fprintf(stderr, "Cannot parse LoaderDevicePartUUID EFI variable.\n");
+        return false;
+    }
+
+    efi_boot_partition(&part_guid, esp);
+    return true;
 }
 
 int efi_boot_get_current(char* path, size_t len) {
@@ -204,7 +261,7 @@ int efi_boot_get_numbered(const uint16_t entry, char* path, size_t len) {
             if (p[i] != 0) {
                 // check for invalid data, int entry name
                 // is UCS-2, and entry name should be ASCII,
-                // se every off byte should be 0
+                // so every other byte should be 0
 #if EFI_DEBUG_OUT
                 fprintf(stderr, "EFI variable contains illegal UCS2-LE character\n");
 #endif
@@ -266,29 +323,11 @@ int efi_boot_get_numbered(const uint16_t entry, char* path, size_t len) {
             fprintf(stderr, "EFI entry partition: %s\n", str);
             free(str);
 #endif
-            efi_boot_partition(part_uuid);
+            efi_boot_partition(part_uuid, NULL);
         } else if (pt->type == EFIDP_MEDIA_TYPE && pt->subtype == EFIDP_MEDIA_FILE) {
             // found executable path
-            size_t guessed_length = (size_t) (pt->length - 4) / 2;
-            if (path != NULL && len > guessed_length) {
-                const char16_t*  ucs2 = (const char16_t*) (p + (i + 4));
-                size_t u8_len = 0;
-                size_t c_len = 0;
-
-                for (size_t j = 0; j < guessed_length; j++) {
-                    c_len = c16rtomb(path + u8_len, ucs2[j], &st);
-                    if (c_len == 0)
-                        continue;
-                    if (len > 0)
-                        u8_len += c_len;
-                    else
-                        break;
-                    assert(u8_len < len);
-                }
-                ret = u8_len;
-            } else {
-                // just guess, it's true for ASCII
-                ret = guessed_length;
+            if (_ucs2_to_utf8((const char16_t*) (p + (i + 4)), (pt->length - 4), path, &len)) {
+                ret = (int) len;
             }
             goto cleanup;
         }

@@ -104,8 +104,10 @@ static bool bootloader_load_config(json_object_t sub_conf, bootloader_entry_t* e
 
     json_object_t esp;
     if(!json_object_object_get_ex(sub_conf, "esp", &esp)) {
-        strcpy(entry->esp, EFI_SYSTEM_PARTITION_MOUNT_POINT);
-        fprintf(stderr, "Error: ESP not specified, assume '%s'\n", EFI_SYSTEM_PARTITION_MOUNT_POINT);
+        if (!efi_boot_get_esp(entry->esp)) {
+            strcpy(entry->esp, EFI_SYSTEM_PARTITION_MOUNT_POINT);
+            fprintf(stderr, "Error: ESP not specified, assume '%s'\n", entry->esp);
+        }
     } else {
         if (json_object_get_type(esp) != json_type_string) {
             fprintf(stderr, "Error: type field for esp is not a string\n");

@@ -35,6 +35,7 @@
 #define _EFI_BOOT_H
 
 #include <stddef.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 /**
@@ -64,5 +65,13 @@ int efi_boot_get_current(char* path, size_t len);
  * @returns length of the path
  */
 int efi_boot_get_numbered(const uint16_t entry, char* path, size_t len);
+
+/**
+ * Determine the ESP from EFI variables set by systemd-boot
+ * 
+ * @param[out] esp 
+ * @return true on success
+ */
+bool efi_boot_get_esp(char* esp);
 
 #endif // _EFI_BOOT_H

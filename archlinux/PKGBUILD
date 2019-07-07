@@ -1,7 +1,7 @@
 # Maintainer: Max Resch <resch.max@gmail.com>
 
 pkgname=sealkey
-pkgver=0.1.7
+pkgver=0.1.8
 pkgrel=1
 pkgdesc="Create TPM sealed files using PCR calculated in advance"
 arch=('x86_64')
