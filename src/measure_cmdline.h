@@ -34,6 +34,7 @@
 #ifndef _MEASURE_CMDLINE_H
 #define _MEASURE_CMDLINE_H
 
+#include <stdlib.h>
 #include <stdbool.h>
 
 #include "tpm12_types.h"
@@ -56,6 +57,6 @@ bool initrd_measure1(const char* initrd, tpm_hash_t* digest);
  * @param cmdline kernel command line as in `/proc/cmdline`.
  * @param[out] digest SHA1 digests
  */
-bool kernel_params_measure1(const char* cmdline, tpm_hash_t* digest);
+bool kernel_params_measure1(const char* cmdline, size_t length, tpm_hash_t* digest);
 
 #endif //_MEASURE_CMDLINE_H

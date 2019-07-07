@@ -83,9 +83,9 @@ bool initrd_measure1(const char* initrd, tpm_hash_t* digest) {
     return true;
 }
 
-bool kernel_params_measure1(const char* cmdline, tpm_hash_t* digest) {
+bool kernel_params_measure1(const char* cmdline, size_t length, tpm_hash_t* digest) {
     int offset = 0;
-    offset = strlen(cmdline);
+    offset = length > 0 ? length : strlen(cmdline);
 
     // include the NULL at the end of the string
     offset += 1;

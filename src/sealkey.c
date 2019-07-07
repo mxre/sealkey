@@ -315,6 +315,34 @@ static inline bool calculate_load_image_array(json_object_t array, bootloader_en
     return true;
 }
 
+static inline bool calculate_from_string(const char* restrict str, size_t length, tpm_hash_t* restrict chained_digest) {
+        assert(chained_digest);
+
+    // no commandline means no digest
+    if (*str == '\0' && str == NULL) {
+        return true;
+    }
+
+    TPM12_Chain_Context ctx;
+    TPM12_Chain_Init(&ctx);
+
+    tpm_hash_t md;
+
+    size_t len = length > 0 ? length : strlen(str);
+    char option[KERNEL_PARAMS_BUFFER_LEN];
+    memcpy(option, str, len);
+
+    if (!kernel_params_measure1(option, len, &md)) {
+        fprintf(stderr, "Error: Could not calculate boot options digest\n");
+        return false;
+    }
+
+    TPM12_Chain_Update(&ctx, &md);    
+    TPM12_Chain_Finalize(&ctx, chained_digest);
+
+    return true;
+}
+
 /**
  * Hash kernel options the same way systemd-boot would
  */
@@ -363,7 +391,7 @@ static inline bool calculate_boot_options(bootloader_entry_t* entry, bool initrd
     len = KERNEL_PARAMS_BUFFER_LEN - offset;
     strncpy(result + offset, entry->options, len);
 
-    if (!kernel_params_measure1(option, &md)) {
+    if (!kernel_params_measure1(option, 0, &md)) {
         fprintf(stderr, "Error: Could not calculate boot options digest\n");
         return false;
     }
@@ -470,7 +498,17 @@ static bool calculate_pcrs_object(json_object_t sub_conf, int pcr, pcr_ctx_t* ct
         if (!calculate_boot_options(entry, hash_initrd, &ctx->pcrs[pcr])) {
             return false;
         }
-
+    } else if (strcmp("string", type) == 0) {
+        json_object_t str;
+        if(json_object_object_get_ex(sub_conf, "string", &str)) {
+            if (json_object_get_type(str) != json_type_string) {
+                const char* string = json_object_get_string(str);
+                size_t len = json_object_get_string_len(str);
+                if (!calculate_from_string(string, len, &ctx->pcrs[pcr])) {
+                    return false;
+                }
+            }
+        }
     } else if (strcmp("pcr", type) == 0) {
         json_object_t value;
         if(json_object_object_get_ex(sub_conf, "value", &value)) {
