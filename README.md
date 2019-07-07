@@ -27,7 +27,7 @@ Configuration
 
 sealkey reads the setting, on how to generate the PCRs for sealing from a JSON file.
 
-~~~~~~~~~~~~~{.js}
+~~~~~~~~~~~~~{.json}
 {
   "key": { "name": "kmk", "size": 32 },
    "bootloader": {
@@ -63,17 +63,35 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
      UEFI applications in the order they are called eg, first the Bootloader then the Kernel.
      The paths are relative the the ESP. There are also special value, that automatically
      retrieve the paths:
-     - `$efiboot:default` and `$efiboot:current` read the first bootloader or current bootloader
-        from the EFI variables. Be careful when using `$efiboot:default` the first loader
-        in the BootOrder list is used, if it isn't an EFI executable e.g., a disk entry, it won't work.
      - `$efiboot:XXXX` use the entry with the specified number, see output of `efimootmgr`.
+     - `$efiboot:default` the first loaderin the BootOrder list is used, if it isn't an EFI executable, e.g.
+       a disk entry, it won't work.
+     - `$efiboot:current` read the current bootloader from the EFI variables.
      - `$linux` for the linux kernel provided by the bootloader entry.
    - *entry-cmdline* create a hash the same way systemd-boot creates PCR 8 from kernel parameters.
      If `systemd` is built with the `--enable-tpm` configure option, systemd-boot supports measuring
      the supplied kernel commandline, to a PCR specified at compile time. The default is PCR 8.
+   - *string* with paramter *string* allows to directly hash, e.g. the kernel command line.
 
 `json-c`, the JSON parser, uses sloppy rules, so several extensions to JSON files are working i.e.,
 JavaScript comments.
+
+Minimal Example
+---------------
+Here another minimal example, were the ESP is automatically determined. The *bootloader* section
+can be empty, but is must be part of the file. There efistub kernel is relative to the ESP and
+the kernel parameters are provided as a string.
+~~~~~~~~~~~~~{.json}
+{
+  "bootloader": {},
+  "pcrlock": {
+    "4": { "type": "load-image", "paths": [ "/vmlinuz" ] }
+    "8": { "type": "string", "string": "loglevel=1" }
+  }
+}
+~~~~~~~~~~~~~
+
+
 
 Optional TCSD
 -------------
