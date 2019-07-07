@@ -55,6 +55,7 @@ bool initrd_measure1(const char* initrd, tpm_hash_t* digest);
  * the one in PCR 8.
  *
  * @param cmdline kernel command line as in `/proc/cmdline`.
+ * @param length string length of `cmdline` or `0` to use `strlen()`
  * @param[out] digest SHA1 digests
  */
 bool kernel_params_measure1(const char* cmdline, size_t length, tpm_hash_t* digest);
