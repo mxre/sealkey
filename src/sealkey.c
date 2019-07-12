@@ -116,6 +116,15 @@ static bool bootloader_load_config(json_object_t sub_conf, bootloader_entry_t* e
         strncpy(entry->esp, json_object_get_string(esp), sizeof(entry->esp)-1);
     }
 
+    json_object_t linux_image;
+    if(json_object_object_get_ex(sub_conf, "linux", &linux_image)) {
+        if (json_object_get_type(linux_image) != json_type_string) {
+            fprintf(stderr, "Error: linux field for bootloader is not a string\n");
+            return false;
+        }
+        strcpy(entry->image_name, json_object_get_string(linux_image));
+    }
+
     json_object_t bootloader_type;
     if(!json_object_object_get_ex(sub_conf, "type", &bootloader_type)) {
         // fprintf(stderr, "Error: type field missing for bootloader\n");
@@ -345,6 +354,34 @@ static inline bool calculate_from_string(const char* restrict str, size_t length
     return true;
 }
 
+static inline bool calculate_cmdline_from_image(bootloader_entry_t* entry, tpm_hash_t* restrict chained_digest) {
+    assert(chained_digest);
+
+
+    TPM12_Chain_Context ctx;
+    TPM12_Chain_Init(&ctx);
+
+    tpm_hash_t md;
+
+    char filename[LOADER_ENTRY_PATH_LEN * 2 + 2];
+    if (entry->image_name[0] == '\0') {
+        fprintf(stderr, "Error: $image-cmdline requested, but bootloader configuration did not provide image name\n");
+        return false;
+    }
+    if (entry->image_name[0] == '/') {
+        snprintf(filename, LOADER_ENTRY_PATH_LEN * 2, "%s%s", entry->esp, entry->image_name);
+    } else {
+        snprintf(filename, LOADER_ENTRY_PATH_LEN * 2 + 1, "%s/%s", entry->esp, entry->image_name);
+    }
+
+    pe_params_measure1(filename, &md);
+
+    TPM12_Chain_Update(&ctx, &md);    
+    TPM12_Chain_Finalize(&ctx, chained_digest);
+
+    return true;
+}
+
 /**
  * Hash kernel options the same way systemd-boot would
  */
@@ -485,12 +522,12 @@ static bool calculate_pcrs_object(json_object_t sub_conf, int pcr, pcr_ctx_t* ct
         if (!calculate_load_image_array(array, entry, &ctx->pcrs[pcr])) {
             return false;
         }
-    } else if (strcmp("entry-cmdline", type) == 0) {
+    } else if (strcmp("$entry-cmdline", type) == 0) {
         bool hash_initrd = false;
         json_object_t initrd;
         if(json_object_object_get_ex(sub_conf, "initrd", &initrd)) {
             if (json_object_get_type(initrd) != json_type_boolean) {
-                fprintf(stderr, "Error: initrd in entry-cmdline type, is not a bool\n");
+                fprintf(stderr, "Error: initrd in $entry-cmdline type, is not a bool\n");
                 return false;
             }
 
@@ -498,6 +535,10 @@ static bool calculate_pcrs_object(json_object_t sub_conf, int pcr, pcr_ctx_t* ct
         }
 
         if (!calculate_boot_options(entry, hash_initrd, &ctx->pcrs[pcr])) {
+            return false;
+        }
+    } else if (strcmp("$image-cmdline", type) == 0) {
+        if (!calculate_cmdline_from_image(entry, &ctx->pcrs[pcr])) {
             return false;
         }
     } else if (strcmp("string", type) == 0) {
@@ -1307,7 +1348,7 @@ static inline void print_usage() {
         "    \"pcrlock\": {\n"
         "      \"0\": { \"type\": \"pcr\" },\n"
         "      \"4\": { \"type\": \"load-image\", \"paths\": [ \"$efiboot:default\", \"$linux\" ] },\n"
-        "      \"8\": { \"type\": \"entry-cmdline\" }\n"
+        "      \"8\": { \"type\": \"$entry-cmdline\" }\n"
         "    }\n"
         "  }\n"
         "\n"
@@ -1315,13 +1356,15 @@ static inline void print_usage() {
         "  Keys are created in kernel, the kernel module trusted.ko must be loaded. Keys can be\n"
         "  inspected using the keyctl utility.\n"
         "The \"bootloader\" section defines the systemd-boot entry used for getting the kernel\n"
-        "   cmdline and path for the kernel image.\n"
-        "   Optinally the ESP path can be changed with \"esp\" it defaults to \"/boot\".\n"
+        "   cmdline and path for the kernel image. Alternatively a Kernel PE Image can be provieded\n"
+        "   with the \"linux\" option.\n"
+        "   Optinally the ESP path can be changed with \"esp\".\n"
         "The \"pcrlock\" section lists PCRs for sealing the key, the following types are recognized:\n"
         "  \"pcr\" read the PCR from the Firmware and use it for sealing\n"
         "  \"load-image\" create PCR 4 hash from the list in \"paths\", \n"
         "     \"$linux\" refers to the kernel, \"$efiboot:{default,current,XXXX}\" to a EFI boot entry\n"
-        "  \"entry-cmdline\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n");
+        "  \"$entry-cmdline\" create hash the same way systemd-boot creates PCR 8 from kernel parameters\n"
+        "  \"$image-cmdline\" create hash form cmdline stored in PE image\n");
 }
 
 int main(int argc, char* argv[]) {

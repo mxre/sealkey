@@ -2,12 +2,12 @@
 
 pkgname=sealkey
 pkgver=0.1.8
-pkgrel=1
+pkgrel=2
 pkgdesc="Create TPM sealed files using PCR calculated in advance"
 arch=('x86_64')
 url="https://github.com/mxre/sealkey"
 license=('BSD')
-depends=('json-c' 'keyutils' 'openssl' 'efivar' 'tpm-tools' 'trousers')
+depends=('json-c' 'keyutils' 'openssl' 'efivar' 'trousers')
 makedepends=('git')
 
 source=("${pkgname}::git+${url}#tag=${pkgver}")

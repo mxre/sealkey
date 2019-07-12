@@ -57,7 +57,6 @@ bool pe_image_measure1(const char* file, tpm_hash_t* hash) {
 
 	bool ret = false;
 
-
 	int fd = open(file, O_RDONLY);
 	if (fd < 0) {
 		fprintf(stderr, "Error: open: %m\n");

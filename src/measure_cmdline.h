@@ -60,4 +60,15 @@ bool initrd_measure1(const char* initrd, tpm_hash_t* digest);
  */
 bool kernel_params_measure1(const char* cmdline, size_t length, tpm_hash_t* digest);
 
+/**
+ * Measure the kernel commandline stored in the `.cmdline` section
+ * 
+ * When creating a systemd EFI bootstub for the kernel the commandline may be
+ * stored in inside the UEFI executable.
+ * 
+ * @param file path to the UEFI executable
+ * @param[out] digest SHA1 digest
+ */
+bool pe_params_measure1(const char* file, tpm_hash_t* digest);
+
 #endif //_MEASURE_CMDLINE_H

@@ -36,13 +36,23 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
      "entry": "linux"
   },
   "pcrlock": {
+    // Firmware image
     "0": { "type": "pcr" },
+    // NVRAM Data, EFI boot manager
     "1": { "type": "pcr" },
+    // EFI drivers & frimware loaded from hardware
     "2": { "type": "pcr" },
+    // NVRAM data from hardware
     "3": { "type": "pcr" },
+    // EFI diagnostics, EFI LoadImage()
     "4": { "type": "load-image", "paths": [ "$efiboot:default", "$linux" ] },
+    // GPT partition table (boot device)
     "5": { "type": "pcr" },
-    "8": { "type": "entry-cmdline" }
+    // PCR 6: wake events
+    // EFI secure boot variables
+    "7": { "type": "pcr" },
+    // Kernel Commandline (by systemd-boot)
+    "8": { "type": "$entry-cmdline" }
   }
 }
 ~~~~~~~~~~~~~
@@ -53,8 +63,10 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
  - The *bootloader* section contains information on the configuration of the bootloader.
    Currently only *systemd-boot* is supported. The key *entry* is used
    to read the used kernel image, initrd and kernel commandline. The keys are optional. If
-   not used, the special values `$linux` and `entry-cmdline` can't be used. `esp` is required,
-   or a default (`/boot`) is used.
+   not used, the special values `$linux` and `$entry-cmdline` can't be used. Alternatively an
+   UEFI image can be defined with *linux* and supplies the value for `$linux` and the built in
+   command line as `$image-cmdline`.
+   `esp` is required, or a default (`/boot`) is used.
  - The *pcrlock* section lists PCRs for sealing the key, the following types are recognized:
    - *pcr* read the PCR from the Firmware and use it for sealing, this type supports the optional
      key *value* that allows to set a SHA-1 hash directly in the configuration file.
@@ -76,7 +88,7 @@ sealkey reads the setting, on how to generate the PCRs for sealing from a JSON f
 `json-c`, the JSON parser, uses sloppy rules, so several extensions to JSON files are working i.e.,
 JavaScript comments.
 
-Minimal Example
+Minimal Examples
 ---------------
 Here another minimal example, were the ESP is automatically determined. The *bootloader* section
 can be empty, but is must be part of the file. There efistub kernel is relative to the ESP and
@@ -85,8 +97,27 @@ the kernel parameters are provided as a string.
 {
   "bootloader": {},
   "pcrlock": {
-    "4": { "type": "load-image", "paths": [ "/vmlinuz" ] }
+    "4": { "type": "load-image", "paths": [ "/vmlinuz" ] },
     "8": { "type": "string", "string": "loglevel=1" }
+  }
+}
+~~~~~~~~~~~~~
+
+In the following example, an systemd UEFI stub with builtin cmdline is specified, and no boot configuration file exists. (Uses `systemd-boot` )
+~~~~~~~~~~~~~{.json}
+{
+  "bootloader": {
+    "linux": "/EFI/Linux/linux.efi"
+  },
+  "pcrlock": {
+    "0": { "type": "pcr" },
+    "1": { "type": "pcr" },
+    "2": { "type": "pcr" },
+    "3": { "type": "pcr" },
+    "4": { "type": "load-image", "paths": [ "$efiboot:default", "$linux" ] },
+    "5": { "type": "pcr" },
+    "7": { "type": "pcr" },
+    "8": { "type": "$image-cmdline" }
   }
 }
 ~~~~~~~~~~~~~

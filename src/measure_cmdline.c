@@ -41,6 +41,10 @@
 #include <uchar.h>
 #include <assert.h>
 
+#include <sys/stat.h>
+#include <sys/mman.h>
+
+#include "pe.h"
 #include "tpm12_chain.h"
 #include "hash.h"
 #include "systemd-boot.h"
@@ -107,4 +111,121 @@ bool kernel_params_measure1(const char* cmdline, size_t length, tpm_hash_t* dige
 #endif
 
     return true;
+}
+
+bool pe_params_measure1(const char* file, tpm_hash_t* digest) {
+    assert(file);
+
+    bool ret = false;
+
+    int fd = open(file, O_RDONLY);
+	if (fd < 0) {
+		fprintf(stderr, "Error: open: %m\n");
+		return ret;
+	}
+
+    struct statx* st = (struct statx*) malloc(sizeof(struct statx));
+	statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, st);
+    size_t filesize = st->stx_size;
+    free(st);
+
+    uint8_t* pe_image = mmap(NULL, filesize, PROT_READ, MAP_SHARED, fd, 0);
+    close(fd);
+    if (pe_image == MAP_FAILED) {
+		fprintf(stderr, "Error: mmap: %m\n");
+		goto cleanup;
+	}
+	
+	if ((*(uint16_t*) pe_image) != EFI_IMAGE_DOS_SIGNATURE) {
+		fprintf(stderr, "Error: MZ magic\n");
+		goto cleanup;
+	}	
+	
+	EFI_IMAGE_DOS_HEADER* dos_image_header = (EFI_IMAGE_DOS_HEADER*) pe_image;
+	uint32_t pe_offset = dos_image_header->e_lfanew;
+	
+	EFI_IMAGE_NT_HEADERS64* pe_image_header = (EFI_IMAGE_NT_HEADERS64*) (pe_image + pe_offset);
+	
+	if (pe_image_header->Signature != EFI_IMAGE_NT_SIGNATURE) {
+		fprintf(stderr, "Error: PE magic\n");
+		goto cleanup;
+	}
+	
+	
+	if ((pe_image_header->FileHeader.Characteristics & EFI_IMAGE_FILE_EXECUTABLE_IMAGE) == 0) {
+		fprintf(stderr, "Error: Not an executable: 0x%04x\n", pe_image_header->FileHeader.Characteristics);
+		goto cleanup;
+	}
+	
+	if (pe_image_header->FileHeader.Machine != IMAGE_FILE_MACHINE_X64) {
+		fprintf(stderr, "Error: Not a x64 binary: 0x%04x\n", pe_image_header->FileHeader.Machine);
+		goto cleanup;
+	}
+	
+	if (pe_image_header->OptionalHeader.Magic != EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
+		fprintf(stderr, "Error: Not a PE32+ binary: %04hx\n", pe_image_header->OptionalHeader.Magic);
+		goto cleanup;
+	}
+		
+	if (pe_image_header->OptionalHeader.Subsystem != EFI_IMAGE_SUBSYSTEM_EFI_APPLICATION) {
+		fprintf(stderr, "Error: Not a EFI application: 0x%02hx\n", pe_image_header->OptionalHeader.Subsystem);
+		goto cleanup;
+	}
+
+    EFI_IMAGE_SECTION_HEADER* section_header = malloc(pe_image_header->FileHeader.NumberOfSections * sizeof(EFI_IMAGE_SECTION_HEADER));
+	if (section_header == NULL) {
+		fprintf(stderr, "Error malloc: %m\n");
+		goto cleanup;
+	}
+
+    memset(section_header, 0, pe_image_header->FileHeader.NumberOfSections * sizeof(EFI_IMAGE_SECTION_HEADER));
+    
+    EFI_IMAGE_SECTION_HEADER* section = (EFI_IMAGE_SECTION_HEADER*) (
+		pe_image + 
+		pe_offset + sizeof(EFI_IMAGE_FILE_HEADER) + sizeof(uint32_t) +
+		pe_image_header->FileHeader.SizeOfOptionalHeader);
+    	uint32_t i = 0;
+
+	for (i = 0; i < pe_image_header->FileHeader.NumberOfSections; i++) {
+		uint32_t pos = i;
+		while ((pos > 0) && (section->PointerToRawData < section_header[pos - 1].PointerToRawData)) {
+			memcpy(&section_header[pos], &section_header[pos-1], sizeof(EFI_IMAGE_SECTION_HEADER));
+			pos--;
+		}
+		memcpy(&section_header[pos], section, sizeof(EFI_IMAGE_SECTION_HEADER));
+		section += 1;
+	}
+
+    char cmdline[KERNEL_PARAMS_BUFFER_LEN] = "";
+	
+	for (i = 0; i < pe_image_header->FileHeader.NumberOfSections; i++) {
+		section = (EFI_IMAGE_SECTION_HEADER*) &section_header[i];
+		if (section->SizeOfRawData == 0)
+			continue;
+		
+		uint8_t* base = (uint8_t*) pe_image + section->PointerToRawData;
+		size_t size = (size_t) section->SizeOfRawData;
+#if MEASURE_CMDLINE_DEBUG_OUT
+		printf("PE %08zx - %08zx Section: %s\n", base - pe_image, base - pe_image + size, section->Name);
+#endif
+        if (strncmp((const char*) section->Name, ".cmdline", 8) == 0) {
+            strncpy(cmdline, (const char*) base, size);
+            cmdline[size] = '\0';
+            break;
+        }
+	}
+    free(section_header);
+
+    if (!cmdline[0])
+        goto cleanup;
+
+#if MEASURE_CMDLINE_DEBUG_OUT
+    printf(" %s\n", cmdline);
+#endif
+
+    munmap(pe_image, filesize);
+    return kernel_params_measure1(cmdline, 0, digest);
+cleanup:
+    munmap(pe_image, filesize);
+    return ret;
 }
