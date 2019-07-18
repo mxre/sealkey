@@ -42,7 +42,7 @@
 /**
  * Version of the program
  */
-#define PROGRAM_VERSION "0.1.3"
+#define PROGRAM_VERSION "0.1.10"
 
 /**
  * length of the static buffer we use for the options
